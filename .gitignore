@@ -1,0 +1,15 @@
+# Secrets — ne jamais versionner
+.env
+secrets/*
+!secrets/.gitkeep
+
+# Photos sources et fichiers générés
+input/*
+!input/.gitkeep
+output/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

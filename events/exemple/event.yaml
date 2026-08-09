@@ -1,0 +1,21 @@
+# Configuration d'un événement. Un dossier par événement dans events/,
+# avec un event.yaml et le CSV des participants.
+# Pour un nouvel événement : copier ce dossier, adapter les valeurs.
+
+# Identifiant court, sans espaces ni accents — sert de nom au bucket Supabase
+# (photos-{slug}) et aux dossiers de sortie
+slug: pauleenne-2026
+
+nom: La Pauléenne 2026
+date: 2026-05-17
+
+# Les courses telles qu'elles apparaissent dans la colonne "course" du CSV.
+# Elles servent aussi de filtres dans la galerie.
+courses:
+  - 5km
+  - 10km
+  - rando
+
+# CSV des participants, colonnes : dossard,nom,course
+# (export depuis le logiciel d'inscription, encodage UTF-8)
+participants_csv: events/exemple/participants.csv
