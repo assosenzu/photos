@@ -24,6 +24,7 @@ ne contient rien de spécifique à SENZU.
 ```
 events/exemple/       exemple de configuration d'événement (event.yaml + participants.csv)
 pipeline/             les briques du traitement (OCR, validation, images, upload…)
+tests/                tests automatisés (hors_ligne.py sans clés, interface.py avec navigateur)
 galerie/index.html    la galerie publique (recherche par dossard)
 galerie/admin.html    le poste de tri interne (lectures incertaines, saisie manuelle)
 galerie/annoter.html  annotation d'un échantillon pour mesurer le taux de réussite
@@ -176,7 +177,8 @@ buckets des anciens événements.
 D'abord préparer le dossier de l'événement : copie `events/exemple/` sous un
 nouveau nom (par exemple `events/pauleenne-2026/`), adapte `event.yaml` (slug,
 nom, date, courses, chemin du CSV) et remplace le CSV par le vrai export des
-inscriptions. Puis dépose les photos JPEG dans `input/` et lance :
+inscriptions. Puis dépose les photos dans `input/` — JPEG, PNG ou HEIC
+(photos d'iPhone), tout ressortira en JPEG — et lance :
 
 ```bash
 python scripts/process_event.py events/pauleenne-2026/event.yaml
@@ -232,6 +234,12 @@ En production, on dépose `galerie/index.html` sur n'importe quel hébergement
 `INDEX_PAR_DEFAUT` en tête de son script par l'URL publique de l'index
 Supabase, affichée à la fin du traitement.
 
+La page accepte aussi des liens directs, pratiques pour l'organisateur qui
+veut « une page par épreuve » sur son site : `?course=10km` ouvre la galerie
+déjà filtrée sur une course, `?dossard=245` arrive directement sur les photos
+d'un coureur (c'est le lien à mettre derrière un QR code ou dans un email de
+résultats).
+
 ## Le poste de tri
 
 C'est l'outil interne qui permet de finir le travail de la machine. La page
@@ -276,6 +284,26 @@ Le script sort le taux de photos parfaitement classées, la part des dossards
 visibles retrouvés, la liste des photos à regarder, et une phrase prête à
 l'emploi pour une présentation. C'est aussi l'outil de mesure quand on modifie
 un réglage du pipeline : on ré-évalue et on voit si ça améliore ou dégrade.
+
+## Retirer une photo, purger un événement
+
+Quelqu'un demande le retrait d'une photo (droit à l'image) :
+
+```bash
+python scripts/retirer_photo.py events/mon-evenement/event.yaml IMG_1234.jpg
+```
+
+Elle disparaît du bucket, du journal et de l'index en une commande. Et quand
+un événement n'a plus à être en ligne (durée de publication écoulée, place à
+libérer) :
+
+```bash
+python scripts/purger_evenement.py events/mon-evenement/event.yaml
+```
+
+Le bucket entier est supprimé, après confirmation en tapant le slug. Le cadre
+complet (information des participants, délais, durée de conservation) est
+dans RGPD.md.
 
 ## Le watermark
 

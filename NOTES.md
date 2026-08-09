@@ -59,15 +59,35 @@ et le développement du login se justifiera.
 
 ## Pistes à creuser
 
-**Formats de photos acceptés.** Aujourd'hui : JPEG uniquement. Or les
-photographes et bénévoles enverront aussi du HEIC (iPhone), du PNG, et les
-pros du RAW (NEF, CR3, ARW…). Réflexion préliminaire : accepter HEIC et PNG
-via une étape de conversion en début de pipeline serait peu coûteux
-(bibliothèque pillow-heif) ; le RAW est un autre monde (fichiers énormes,
-rendu à faire, dépendances lourdes) — la pratique du métier est que le
-photographe livre des JPEG exportés, donc consigne à donner aux
-photographes plutôt que développement. À dimensionner quand un vrai cas se
-présentera.
+**Formats de photos.** Réglé pour l'essentiel : le pipeline accepte JPEG,
+PNG et HEIC (iPhone), tout ressort en JPEG. Le RAW (NEF, CR3, ARW…) reste
+volontairement hors périmètre : fichiers énormes, rendu à faire, dépendances
+lourdes — et la pratique du métier est que le photographe livre des JPEG
+exportés. C'est une consigne à donner aux photographes, pas du code à écrire.
+À rouvrir seulement si un photographe partenaire ne peut vraiment pas faire
+autrement.
+
+**Navigation par épreuve.** Question posée : faut-il des « pages » par
+épreuve (l'organisateur arrive sur La Pauléenne, puis sous-dossiers 5 km,
+10 km…) ? Réponse actuelle : pas besoin de structure de dossiers — chaque
+photo est rattachée à ses courses via les dossards détectés, et la galerie
+sait déjà filtrer. Les liens directs `?course=5km` donnent à l'organisateur
+une URL par épreuve à mettre sur son site, ce qui produit le même effet
+qu'un sous-dossier sans dupliquer quoi que ce soit. Cas des courses
+simultanées : non ambigu pour l'outil, une photo avec un coureur du 5 km et
+un du 10 km apparaît dans les deux filtres. Limite connue : les photos
+d'ambiance (sans dossard) ne sont rattachées à aucune épreuve, elles ne
+sortent que dans la vue « toutes les courses ». Si un jour on veut des
+sous-épreuves hiérarchiques (relais, catégories d'âge…), ça passera par une
+structure de courses dans event.yaml, pas par des dossiers.
+
+**Conservation et RGPD.** Le cadre est posé dans RGPD.md (info des
+participants, retrait outillé, purge outillée). Deux paramètres restent des
+choix d'organisateur à inscrire dans sa clause d'information : le délai de
+retrait (7 jours proposés) et la durée de mise en ligne (12 mois proposés).
+Reste aussi à tenir la ligne de registre des traitements, et un modèle de
+contrat de sous-traitance le jour où l'outil est vendu à un organisateur
+extérieur.
 
 **Premier passage en conditions réelles.** Les appels Vision et Supabase
 n'ont encore jamais tourné avec de vraies clés — à valider sur un petit lot

@@ -72,19 +72,27 @@ galerie/annoter.html annotation d'une vérité terrain → verite.json
   (5 req/s, `--debit`) est un garde-fou. Arrêt automatique si les premières
   photos échouent toutes (mauvaise clé, API désactivée) pour ne pas insister
   inutilement.
+- **Formats** : JPEG/PNG/HEIC en entrée (HEIC via pillow-heif, réencodé en
+  JPEG avant l'appel Vision), sorties toujours en .jpg — d'où le contrôle de
+  collision de noms dans process_event et le nom de téléchargement dérivé de
+  l'URL (pas du fichier d'origine) dans la galerie. RAW : hors périmètre,
+  assumé.
+- **Droit à l'image / fin de vie** : `scripts/retirer_photo.py` (retire du
+  bucket + journal + index) et `scripts/purger_evenement.py` (détruit le
+  bucket, confirmation par saisie du slug). Cadre et modèles dans RGPD.md.
 
 ## Tester sans clés
 
-Aucun test automatisé versionné pour l'instant ; ce qui a été utilisé en
-développement :
-
-- tout le pipeline hors API se teste hors-ligne (config, matching, images
-  avec EXIF, journal, index) — voir l'historique de la session, scripts dans
-  le scratchpad ;
-- la galerie et l'admin se testent avec Playwright sur le jeu de démo
-  (`galerie/demo/`, régénérable par `scripts/generer_demo.py`) servi par
-  `python -m http.server` depuis la racine ;
+- `python tests/hors_ligne.py` : tout le pipeline hors API (config, matching,
+  images EXIF/PNG/HEIC, journal, index, scripts apply_validations /
+  retirer_photo / evaluer via subprocess). Zéro clé, zéro réseau.
+- `python tests/interface.py` : galerie, poste de tri et annotation dans un
+  Chromium Playwright sur le jeu de démo (`galerie/demo/`, régénérable par
+  `scripts/generer_demo.py`). Saute proprement si playwright n'est pas
+  installé ; cherche le Chromium via PLAYWRIGHT_BROWSERS_PATH ou $CHROMIUM.
 - `--sans-upload --limite N` permet un vrai run Vision sans toucher Supabase.
+
+Lancer les deux après toute modification du pipeline ou des pages HTML.
 
 Ce qui n'a jamais tourné contre les vrais services : les appels Vision et
 Supabase réels. Au premier run réel, surveiller `stockage.py` (versions du

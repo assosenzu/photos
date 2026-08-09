@@ -43,7 +43,7 @@ from pipeline.vision_ocr import (
     extraire_nombres,
 )
 
-EXTENSIONS = {".jpg", ".jpeg"}
+EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".heif"}
 CHEMIN_WATERMARK = "assets/watermark.png"
 ECHECS_CONSECUTIFS_MAX = 5
 
@@ -59,7 +59,29 @@ def lister_photos(dossier):
         erreur(f"le dossier '{dossier}' n'existe pas.")
     photos = sorted(p for p in d.iterdir() if p.suffix.lower() in EXTENSIONS)
     if not photos:
-        erreur(f"aucune photo JPEG dans '{dossier}'.")
+        erreur(f"aucune photo (JPEG, PNG ou HEIC) dans '{dossier}'.")
+    heic = [p for p in photos if p.suffix.lower() in (".heic", ".heif")]
+    if heic:
+        from pipeline.images import HEIF_DISPONIBLE
+
+        if not HEIF_DISPONIBLE:
+            erreur(
+                f"{len(heic)} photo(s) HEIC dans '{dossier}' mais le module "
+                "pillow-heif n'est pas installé.\n"
+                "Lance : pip install -r requirements.txt"
+            )
+    # Deux fichiers qui ne diffèrent que par l'extension (IMG_1.jpg et
+    # IMG_1.heic) produiraient le même IMG_1.jpg en sortie
+    doublons = {}
+    for p in photos:
+        doublons.setdefault(p.stem, []).append(p.name)
+    en_conflit = [", ".join(noms) for noms in doublons.values() if len(noms) > 1]
+    if en_conflit:
+        erreur(
+            "des fichiers porteraient le même nom une fois convertis en JPEG : "
+            + " / ".join(en_conflit)
+            + "\nRenomme l'un des deux avant de relancer."
+        )
     return photos
 
 
@@ -170,11 +192,11 @@ def main():
             chemin, dossier_miniatures, dossier_web, watermark
         )
         if stockage is not None:
-            url_miniature = stockage.deposer(miniature, f"thumbs/{chemin.name}")
-            url_web = stockage.deposer(web, f"web/{chemin.name}")
+            url_miniature = stockage.deposer(miniature, f"thumbs/{miniature.name}")
+            url_web = stockage.deposer(web, f"web/{web.name}")
         else:
-            url_miniature = f"output/{slug}/thumbs/{chemin.name}"
-            url_web = f"output/{slug}/web/{chemin.name}"
+            url_miniature = f"output/{slug}/thumbs/{miniature.name}"
+            url_web = f"output/{slug}/web/{web.name}"
 
         entree = {
             "fichier": chemin.name,

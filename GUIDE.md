@@ -26,8 +26,11 @@ résultat.
 
 ## 3. Déposer les photos
 
-Toutes les photos JPEG dans le dossier `input/`. Peu importe les sous-noms ou
-l'ordre, mais vide-le des photos d'un ancien événement avant.
+Toutes les photos dans le dossier `input/` — JPEG de préférence, mais le PNG
+et le HEIC des iPhones passent aussi (tout sera converti en JPEG). Le RAW des
+appareils pros n'est pas géré : demande aux photographes de livrer des JPEG
+exportés, c'est leur pratique normale. Vide le dossier des photos d'un ancien
+événement avant.
 
 Si tu veux te rassurer d'abord, teste l'OCR sur cinq photos :
 `python scripts/test_vision.py --csv events/run-bike-2026/participants.csv`
@@ -86,6 +89,12 @@ Pour connaître ton taux de réussite sur l'événement (utile en interne et pou
 la communication), annote une centaine de photos avec
 `galerie/annoter.html` puis lance `python scripts/evaluer.py` — la procédure
 détaillée est dans le README, section « Mesurer le taux de réussite ».
+
+Autre demande qui arrivera : « je veux que cette photo soit retirée » (droit
+à l'image). Une commande suffit —
+`python scripts/retirer_photo.py events/…/event.yaml IMG_1234.jpg` — et la
+photo disparaît de la galerie. Délais, information des participants et fin de
+vie des galeries : voir RGPD.md.
 
 Question fréquente : « un participant signale qu'une photo n'est pas de lui ».
 Ouvre `output/{slug}/journal.jsonl`, cherche la ligne du fichier photo

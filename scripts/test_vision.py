@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 PRIX_PAR_IMAGE_USD = 1.50 / 1000
 QUOTA_GRATUIT_MENSUEL = 1000
 
-EXTENSIONS = {".jpg", ".jpeg"}
+EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 # Un dossard fait entre 1 et 5 chiffres. On capture large ici : le tri entre
 # vrais dossards et faux positifs (heures, sponsors, panneaux) se fait par

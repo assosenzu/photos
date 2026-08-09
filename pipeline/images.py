@@ -5,6 +5,16 @@ from pathlib import Path
 
 from PIL import Image, ImageOps
 
+# Support des photos HEIC/HEIF (iPhone) quand pillow-heif est installé —
+# sans lui, seuls JPEG et PNG sont lus.
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    HEIF_DISPONIBLE = True
+except ImportError:
+    HEIF_DISPONIBLE = False
+
 TAILLE_MINIATURE = 800
 TAILLE_WEB = 1600
 QUALITE_MINIATURE = 80
@@ -62,8 +72,11 @@ def generer_versions(chemin, dossier_miniatures, dossier_web, watermark=None):
 
     La version web reçoit le watermark (si un logo est fourni), la miniature
     reste sans — elle est trop petite pour que ce soit lisible.
+
+    Quel que soit le format d'entrée (JPEG, PNG, HEIC), les sorties sont
+    toujours des JPEG.
     """
-    nom = Path(chemin).name
+    nom = Path(chemin).stem + ".jpg"
     chemin_miniature = Path(dossier_miniatures) / nom
     chemin_web = Path(dossier_web) / nom
 

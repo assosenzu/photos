@@ -47,11 +47,34 @@ class LecteurVision:
     def lire_texte(self, chemin):
         """Texte complet détecté sur la photo (chaîne vide si rien)."""
         self._respecter_debit()
-        with open(chemin, "rb") as f:
-            image = self._vision.Image(content=f.read())
+        image = self._vision.Image(content=self._contenu_image(chemin))
         reponse = self._client.text_detection(image=image)
         if reponse.error.message:
             raise RuntimeError(reponse.error.message)
         if not reponse.text_annotations:
             return ""
         return reponse.text_annotations[0].description
+
+    @staticmethod
+    def _contenu_image(chemin):
+        """Octets à envoyer à Vision.
+
+        JPEG et PNG partent tels quels ; les autres formats acceptés par le
+        pipeline (HEIC…) sont réencodés en JPEG, que l'API ne les accepte pas
+        directement.
+        """
+        chemin = str(chemin)
+        if chemin.lower().endswith((".jpg", ".jpeg", ".png")):
+            with open(chemin, "rb") as f:
+                return f.read()
+        import io
+
+        from PIL import Image, ImageOps
+
+        from pipeline import images  # noqa: F401 (active le support HEIF)
+
+        with Image.open(chemin) as brut:
+            image = ImageOps.exif_transpose(brut).convert("RGB")
+        tampon = io.BytesIO()
+        image.save(tampon, "JPEG", quality=90)
+        return tampon.getvalue()

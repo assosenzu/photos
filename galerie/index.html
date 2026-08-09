@@ -372,6 +372,13 @@ function rendreCompteur() {
   }
 }
 
+function nomTelechargement(photo) {
+  // le nom du fichier en ligne (toujours .jpg), pas le nom d'origine qui
+  // peut être un .heic ou .png converti
+  const url = photo.web || photo.miniature || "";
+  return url.split("/").pop().split("?")[0] || photo.fichier;
+}
+
 function telecharger(url, nom) {
   fetch(url)
     .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
@@ -412,7 +419,7 @@ function rendreGrille() {
     bouton.title = "Télécharger la photo";
     bouton.addEventListener("click", e => {
       e.stopPropagation();
-      telecharger(resoudreUrl(photo.web), photo.fichier);
+      telecharger(resoudreUrl(photo.web), nomTelechargement(photo));
     });
     carte.appendChild(bouton);
 
@@ -464,7 +471,7 @@ $("lb-precedente").addEventListener("click", () => naviguer(-1));
 $("lb-suivante").addEventListener("click", () => naviguer(1));
 $("lb-telecharger").addEventListener("click", () => {
   const photo = visibles[lightboxIndex];
-  if (photo) telecharger(resoudreUrl(photo.web), photo.fichier);
+  if (photo) telecharger(resoudreUrl(photo.web), nomTelechargement(photo));
 });
 $("lightbox").addEventListener("click", e => {
   if (e.target === $("lightbox") || e.target.classList.contains("scene")) fermerLightbox();
@@ -511,6 +518,19 @@ async function demarrer() {
   }
   document.title = "Photos — " + indexCharge.evenement.nom;
   appliquerIdentite(indexCharge.organisateur || {});
+
+  // Liens directs : ?course=5km ouvre la galerie déjà filtrée sur une
+  // épreuve (une "page" par course sans dupliquer quoi que ce soit),
+  // ?dossard=245 arrive directement sur les photos d'un coureur.
+  const courseDemandee = parametres.get("course");
+  if (courseDemandee && indexCharge.evenement.courses.includes(courseDemandee)) {
+    etat.course = courseDemandee;
+  }
+  const dossardDemande = (parametres.get("dossard") || "").replace(/\D/g, "");
+  if (dossardDemande) {
+    etat.dossard = dossardDemande;
+    $("champ-dossard").value = dossardDemande;
+  }
   rafraichir();
 }
 

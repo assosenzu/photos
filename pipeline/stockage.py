@@ -59,3 +59,12 @@ class StockageSupabase:
     def url_publique(self, chemin_distant):
         url = self._client.storage.from_(self.bucket).get_public_url(chemin_distant)
         return url.rstrip("?")
+
+    def supprimer(self, chemins_distants):
+        """Supprime des fichiers du bucket (liste de chemins)."""
+        self._client.storage.from_(self.bucket).remove(chemins_distants)
+
+    def detruire_bucket(self):
+        """Vide puis supprime le bucket entier."""
+        self._client.storage.empty_bucket(self.bucket)
+        self._client.storage.delete_bucket(self.bucket)
