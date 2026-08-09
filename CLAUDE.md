@@ -32,8 +32,12 @@ input/*.jpg
              └─ pipeline/index_builder.py → output/{slug}/index.json
                                             + upload en racine du bucket
 galerie/index.html   lit index.json (constante INDEX_PAR_DEFAUT ou ?index=)
-galerie/admin.html   liste les confiance "moyenne", exporte validations.json
+galerie/admin.html   poste de tri : confiance "moyenne" à valider/rejeter,
+                     photos sans dossard (saisie manuelle contrôlée par
+                     dossards_connus, ou marquage "ambiance")
    └─ scripts/apply_validations.py    réécrit le journal, régénère l'index
+galerie/annoter.html annotation d'une vérité terrain → verite.json
+   └─ scripts/evaluer.py              taux de bon classement vs index.json
 ```
 
 ## Points de design à connaître
@@ -47,6 +51,13 @@ galerie/admin.html   liste les confiance "moyenne", exporte validations.json
   est préfixe ou suffixe d'exactement un dossard du CSV lui est attribué avec
   `confiance: "moyenne"` et le fragment lu dans `lu`. Deux dossards
   compatibles → rejet. Longueur minimale du fragment : 2 chiffres.
+- **index.json expose aussi** : `dossards_connus` ({numéro: course}, sans
+  les noms — équivalent d'une liste de départ, publiable) pour le contrôle
+  des saisies manuelles, et un drapeau `verifiee` sur les photos passées au
+  poste de tri, pour qu'elles ne reviennent pas dans la file "sans dossard".
+- **validations.json** (export admin) porte quatre décisions : `valider`,
+  `rejeter` (cas moyenne), `ajouter` (saisie manuelle, refusée hors liste des
+  participants) et `ambiance` (photo vérifiée sans dossard).
 - **URLs dans index.json** : absolues (Supabase) en mode normal, relatives à
   la racine du dépôt avec `--sans-upload`. Les pages HTML résolvent les
   chemins non-http en les préfixant de `/` — d'où le `python -m http.server`
@@ -78,3 +89,10 @@ développement :
 Ce qui n'a jamais tourné contre les vrais services : les appels Vision et
 Supabase réels. Au premier run réel, surveiller `stockage.py` (versions du
 client) et le format des URLs publiques.
+
+## Contexte produit
+
+Les décisions non techniques (marque blanche, tri interne plutôt que login
+organisateur, modèle économique en réflexion, formats photos à venir) sont
+consignées dans NOTES.md — le lire avant de proposer une évolution qui
+toucherait au positionnement de l'outil.

@@ -25,11 +25,13 @@ ne contient rien de spécifique à SENZU.
 events/exemple/       exemple de configuration d'événement (event.yaml + participants.csv)
 pipeline/             les briques du traitement (OCR, validation, images, upload…)
 galerie/index.html    la galerie publique (recherche par dossard)
-galerie/admin.html    la page de validation des lectures incertaines
-galerie/demo/         jeu de démonstration pour tester la galerie sans rien configurer
+galerie/admin.html    le poste de tri interne (lectures incertaines, saisie manuelle)
+galerie/annoter.html  annotation d'un échantillon pour mesurer le taux de réussite
+galerie/demo/         jeu de démonstration pour tester les pages sans rien configurer
 scripts/test_vision.py     test de l'OCR sur quelques photos
 scripts/process_event.py   le pipeline complet d'un événement
-scripts/apply_validations.py   applique les décisions de la page admin
+scripts/apply_validations.py   applique les décisions du poste de tri
+scripts/evaluer.py         compare la détection à la vérité terrain annotée
 input/                déposer ici les photos à traiter (jamais versionnées)
 secrets/              déposer ici la clé Google Cloud (jamais versionnée)
 assets/               logo pour le watermark (optionnel, voir plus bas)
@@ -230,27 +232,50 @@ En production, on dépose `galerie/index.html` sur n'importe quel hébergement
 `INDEX_PAR_DEFAUT` en tête de son script par l'URL publique de l'index
 Supabase, affichée à la fin du traitement.
 
-## Valider les lectures incertaines
+## Le poste de tri
 
-Après un traitement, certains dossards sont attribués en "confiance moyenne" :
-l'OCR n'a lu qu'un morceau de numéro qui ne peut correspondre qu'à un seul
-inscrit. La page `galerie/admin.html` (à ouvrir en local, même serveur que
-ci-dessus) les liste photo par photo :
+C'est l'outil interne qui permet de finir le travail de la machine. La page
+`galerie/admin.html` (en local, même serveur que ci-dessus) présente deux
+files :
+
+- les lectures incertaines — un morceau de numéro lu, un seul inscrit
+  possible, à confirmer ou rejeter en regardant la photo ;
+- les photos où rien n'a été détecté — souvent un dossard présent mais
+  illisible pour l'OCR. On y saisit le numéro à la main (refusé s'il n'est
+  pas dans la liste des inscrits), ou on marque la photo « aucun dossard
+  lisible » pour qu'elle ne revienne plus.
 
 ```
 http://localhost:8000/galerie/admin.html?index=output/mon-evenement/index.json
 ```
 
-On valide ou rejette chaque cas, on clique sur *Exporter les décisions* (ça
-télécharge un `validations.json`), puis :
+Une fois les cas tranchés, *Exporter les décisions* télécharge un
+`validations.json`, à appliquer avec :
 
 ```bash
 python scripts/apply_validations.py events/mon-evenement/event.yaml validations.json
 ```
 
-Les dossards validés passent en confiance haute, les rejetés disparaissent,
-et l'index est régénéré puis republié sur Supabase. Cette page est un outil
+L'index est régénéré puis republié sur Supabase. Cette page est un outil
 interne : elle n'est pas destinée à être mise en ligne.
+
+## Mesurer le taux de réussite
+
+Pour savoir — et pouvoir annoncer — quel pourcentage de photos la détection
+classe correctement, on compare ses résultats à une vérité terrain annotée à
+la main. La page `galerie/annoter.html` fait défiler les photos une par une :
+tu tapes les numéros réellement lisibles à l'œil (sans voir ce que la machine
+a trouvé, pour ne pas être influencé), et tu exportes un `verite.json`.
+Annoter une centaine de photos prend une petite demi-heure. Puis :
+
+```bash
+python scripts/evaluer.py output/mon-evenement/index.json verite.json
+```
+
+Le script sort le taux de photos parfaitement classées, la part des dossards
+visibles retrouvés, la liste des photos à regarder, et une phrase prête à
+l'emploi pour une présentation. C'est aussi l'outil de mesure quand on modifie
+un réglage du pipeline : on ré-évalue et on voit si ça améliore ou dégrade.
 
 ## Le watermark
 

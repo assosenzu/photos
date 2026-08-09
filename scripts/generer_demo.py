@@ -119,6 +119,11 @@ def main():
             },
         },
         "genere_le": "2026-05-17T18:00:00+00:00",
+        "dossards_connus": {
+            "101": "5km", "102": "5km", "103": "5km", "115": "5km",
+            "230": "10km", "231": "10km", "245": "10km", "258": "10km",
+            "501": "rando", "502": "rando",
+        },
         "photos": photos_index,
     }
     with open(DEMO / "index.json", "w", encoding="utf-8") as f:

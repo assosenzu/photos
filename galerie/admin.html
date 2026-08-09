@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Validation des dossards incertains</title>
+<title>Poste de tri des photos</title>
 <style>
 :root {
   --accent: #2563eb;
@@ -52,6 +52,11 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  background: var(--fond);
+  padding: .6rem 0;
+  z-index: 10;
 }
 .barre-etat .avancement { color: var(--texte-doux); }
 #exporter {
@@ -64,6 +69,9 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
   cursor: pointer;
 }
 #exporter:disabled { background: #9db4e8; cursor: default; }
+
+h2 { font-size: 1.05rem; margin: 1.4rem 0 .7rem; }
+h2 .nb { color: var(--texte-doux); font-weight: normal; }
 
 .cas {
   display: flex;
@@ -82,11 +90,11 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
   border-radius: .35rem;
   cursor: zoom-in;
 }
-.cas .details { flex: 1; min-width: 220px; }
+.cas .details { flex: 1; min-width: 240px; }
 .cas .fichier { color: var(--texte-doux); font-size: .82rem; }
 .cas .proposition { font-size: 1.05rem; margin: .4rem 0; }
 .cas .proposition strong { font-size: 1.25rem; }
-.cas .boutons { display: flex; gap: .5rem; }
+.cas .boutons { display: flex; gap: .5rem; flex-wrap: wrap; }
 .cas button {
   border: 2px solid transparent;
   border-radius: .45rem;
@@ -96,8 +104,39 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
   background: #eef0f3;
 }
 .cas button.valider.choisi { background: var(--valider); color: #fff; }
-.cas button.rejeter.choisi { background: var(--rejeter); color: #fff; }
+.cas button.rejeter.choisi, .cas button.ambiance.choisi { background: var(--rejeter); color: #fff; }
 .cas.tranche { opacity: .75; }
+
+.saisie { display: flex; gap: .5rem; margin: .5rem 0; }
+.saisie input {
+  width: 9rem;
+  font-size: 1rem;
+  padding: .45rem .6rem;
+  border: 1px solid #cfcfca;
+  border-radius: .45rem;
+}
+.saisie input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.saisie .ajouter { background: var(--accent); color: #fff; }
+.probleme { color: var(--rejeter); font-size: .85rem; min-height: 1.1em; margin: 0 0 .3rem; }
+.chips { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .4rem; }
+.chip {
+  background: var(--valider);
+  color: #fff;
+  border-radius: 2rem;
+  padding: .2rem .4rem .2rem .8rem;
+  font-size: .9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+}
+.chip button {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: .9rem;
+  padding: 0 .3rem;
+}
 .vide { text-align: center; color: var(--texte-doux); padding: 3rem 1rem; }
 
 .zoom {
@@ -112,20 +151,19 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
 <body>
 
 <header>
-  <h1>Validation des dossards incertains</h1>
-  <p>Chaque cas ci-dessous est une lecture partielle : l'OCR n'a lu qu'un
-  morceau de numéro, mais un seul dossard inscrit peut correspondre. À toi de
-  confirmer sur la photo.</p>
+  <h1>Poste de tri des photos</h1>
+  <p>Outil interne. Deux files à traiter : les lectures partielles à
+  confirmer, et les photos où rien n'a été détecté — souvent un dossard
+  présent mais illisible pour l'OCR, à saisir à la main.</p>
 </header>
 
 <main>
-  <div class="mode-emploi" id="mode-emploi">
-    Tranche chaque cas (la photo s'agrandit au clic), puis
-    <em>Exporter les décisions</em> : un fichier <code>validations.json</code>
-    est téléchargé. Applique-le avec
-    <code id="commande">python scripts/apply_validations.py events/…/event.yaml
-    validations.json</code> — les dossards validés passent en confiance haute,
-    les rejetés sont retirés, et l'index est régénéré puis republié.
+  <div class="mode-emploi">
+    Tranche les cas (photo agrandie au clic), puis <em>Exporter les
+    décisions</em> : un fichier <code>validations.json</code> est téléchargé.
+    Applique-le avec <code>python scripts/apply_validations.py
+    events/…/event.yaml validations.json</code> — l'index est régénéré puis
+    republié. Les photos marquées « ambiance » ne réapparaîtront plus ici.
   </div>
 
   <div class="barre-etat">
@@ -133,9 +171,14 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
     <button id="exporter" disabled>Exporter les décisions</button>
   </div>
 
-  <div id="liste"></div>
-  <p class="vide" id="vide" hidden>Aucun cas à valider dans cet index — tout
-  a été lu avec une confiance haute.</p>
+  <h2>Lectures incertaines <span class="nb" id="nb-incertaines"></span></h2>
+  <div id="liste-incertaines"></div>
+  <p class="vide" id="vide-incertaines" hidden>Aucune lecture incertaine.</p>
+
+  <h2>Photos sans dossard détecté <span class="nb" id="nb-sans"></span></h2>
+  <div id="liste-sans"></div>
+  <p class="vide" id="vide-sans" hidden>Aucune photo à examiner — tout a été
+  détecté ou déjà vérifié.</p>
 </main>
 
 <div class="zoom" id="zoom"><img id="zoom-image" alt="Photo agrandie"></div>
@@ -143,13 +186,15 @@ main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
 <script>
 "use strict";
 
-// Par défaut on charge l'index local du dernier traitement ; on peut viser
-// un autre fichier avec ?index=chemin/vers/index.json
+// Par défaut on charge l'index de démonstration ; en usage réel, passer le
+// chemin de l'index du traitement : admin.html?index=output/…/index.json
 const INDEX_PAR_DEFAUT = "galerie/demo/index.json";
 
 const $ = id => document.getElementById(id);
-const decisions = new Map(); // "fichier|numero" -> "valider" | "rejeter"
-let cas = [];
+const decisions = new Map(); // "fichier|numero" -> valider|rejeter|ajouter ; "fichier|" -> ambiance
+let casIncertains = [];      // {photo, dossard}
+let photosSans = [];         // {photo}
+let dossardsConnus = {};     // numero -> course
 
 function resoudreUrl(chemin) {
   if (!chemin) return "";
@@ -157,38 +202,57 @@ function resoudreUrl(chemin) {
   return "/" + chemin.replace(/^\/+/, "");
 }
 
+function heureDe(photo) {
+  return photo.horodatage
+    ? " · " + photo.horodatage.slice(11, 16).replace(":", "h") : "";
+}
+
+function imageZoomable(photo) {
+  const img = document.createElement("img");
+  img.loading = "lazy";
+  img.src = resoudreUrl(photo.web || photo.miniature);
+  img.alt = photo.fichier;
+  img.addEventListener("click", () => {
+    $("zoom-image").src = img.src;
+    $("zoom").classList.add("ouvert");
+  });
+  return img;
+}
+
+function ajoutsDe(fichier) {
+  return [...decisions.entries()]
+    .filter(([cle, d]) => d === "ajouter" && cle.startsWith(fichier + "|"))
+    .map(([cle]) => cle.split("|")[1]);
+}
+
 function majAvancement() {
+  const tranchesIncertains = casIncertains.filter(
+    c => decisions.has(c.photo.fichier + "|" + c.dossard.numero)).length;
+  const tranchesSans = photosSans.filter(
+    ({ photo }) => decisions.get(photo.fichier + "|") === "ambiance"
+      || ajoutsDe(photo.fichier).length > 0).length;
+  const total = casIncertains.length + photosSans.length;
   $("avancement").textContent =
-    `${cas.length} cas à examiner — ${decisions.size} tranché(s)`;
+    `${total} cas à examiner — ${tranchesIncertains + tranchesSans} tranché(s)`;
   $("exporter").disabled = decisions.size === 0;
 }
 
-function rendre() {
-  const liste = $("liste");
+function rendreIncertains() {
+  const liste = $("liste-incertaines");
   liste.innerHTML = "";
-  $("vide").hidden = cas.length > 0;
+  $("nb-incertaines").textContent = `(${casIncertains.length})`;
+  $("vide-incertaines").hidden = casIncertains.length > 0;
 
-  for (const c of cas) {
+  for (const c of casIncertains) {
     const cle = c.photo.fichier + "|" + c.dossard.numero;
     const bloc = document.createElement("div");
     bloc.className = "cas" + (decisions.has(cle) ? " tranche" : "");
-
-    const img = document.createElement("img");
-    img.loading = "lazy";
-    img.src = resoudreUrl(c.photo.web || c.photo.miniature);
-    img.alt = c.photo.fichier;
-    img.addEventListener("click", () => {
-      $("zoom-image").src = img.src;
-      $("zoom").classList.add("ouvert");
-    });
-    bloc.appendChild(img);
+    bloc.appendChild(imageZoomable(c.photo));
 
     const details = document.createElement("div");
     details.className = "details";
-    const heure = c.photo.horodatage
-      ? " · " + c.photo.horodatage.slice(11, 16).replace(":", "h") : "";
     details.innerHTML =
-      `<div class="fichier">${c.photo.fichier}${heure}</div>
+      `<div class="fichier">${c.photo.fichier}${heureDe(c.photo)}</div>
        <div class="proposition">Lu « ${c.dossard.lu ?? "?"} » →
        dossard proposé <strong>${c.dossard.numero}</strong>
        ${c.dossard.course ? "(" + c.dossard.course + ")" : ""}</div>`;
@@ -202,8 +266,8 @@ function rendre() {
       b.addEventListener("click", () => {
         if (decisions.get(cle) === decision) decisions.delete(cle);
         else decisions.set(cle, decision);
+        rendreIncertains();
         majAvancement();
-        rendre();
       });
       boutons.appendChild(b);
     }
@@ -211,7 +275,105 @@ function rendre() {
     bloc.appendChild(details);
     liste.appendChild(bloc);
   }
-  majAvancement();
+}
+
+function rendreSans() {
+  const liste = $("liste-sans");
+  liste.innerHTML = "";
+  $("nb-sans").textContent = `(${photosSans.length})`;
+  $("vide-sans").hidden = photosSans.length > 0;
+
+  for (const { photo } of photosSans) {
+    const cleAmbiance = photo.fichier + "|";
+    const ajouts = ajoutsDe(photo.fichier);
+    const bloc = document.createElement("div");
+    bloc.className = "cas" +
+      (ajouts.length || decisions.has(cleAmbiance) ? " tranche" : "");
+    bloc.appendChild(imageZoomable(photo));
+
+    const details = document.createElement("div");
+    details.className = "details";
+    details.innerHTML = `<div class="fichier">${photo.fichier}${heureDe(photo)}</div>`;
+
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    for (const numero of ajouts) {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = numero + (dossardsConnus[numero] ? " · " + dossardsConnus[numero] : "");
+      const retirer = document.createElement("button");
+      retirer.textContent = "✕";
+      retirer.title = "Retirer";
+      retirer.addEventListener("click", () => {
+        decisions.delete(photo.fichier + "|" + numero);
+        rendreSans();
+        majAvancement();
+      });
+      chip.appendChild(retirer);
+      chips.appendChild(chip);
+    }
+    details.appendChild(chips);
+
+    const probleme = document.createElement("p");
+    probleme.className = "probleme";
+
+    const saisie = document.createElement("div");
+    saisie.className = "saisie";
+    const champ = document.createElement("input");
+    champ.type = "text";
+    champ.inputMode = "numeric";
+    champ.placeholder = "N° de dossard";
+    champ.setAttribute("aria-label", "Numéro de dossard à ajouter");
+    const ajouter = document.createElement("button");
+    ajouter.className = "ajouter";
+    ajouter.textContent = "Ajouter";
+    const validerSaisie = () => {
+      const numero = champ.value.trim();
+      probleme.textContent = "";
+      if (!numero) return;
+      if (!(numero in dossardsConnus)) {
+        probleme.textContent = `Le ${numero} n'est pas dans la liste des inscrits.`;
+        return;
+      }
+      if (decisions.has(photo.fichier + "|" + numero)) {
+        probleme.textContent = `Le ${numero} est déjà ajouté sur cette photo.`;
+        return;
+      }
+      decisions.set(photo.fichier + "|" + numero, "ajouter");
+      decisions.delete(cleAmbiance);
+      champ.value = "";
+      rendreSans();
+      majAvancement();
+    };
+    ajouter.addEventListener("click", validerSaisie);
+    champ.addEventListener("keydown", e => { if (e.key === "Enter") validerSaisie(); });
+    saisie.appendChild(champ);
+    saisie.appendChild(ajouter);
+    details.appendChild(saisie);
+    details.appendChild(probleme);
+
+    const boutons = document.createElement("div");
+    boutons.className = "boutons";
+    const ambiance = document.createElement("button");
+    ambiance.className = "ambiance" +
+      (decisions.get(cleAmbiance) === "ambiance" ? " choisi" : "");
+    ambiance.textContent = "Aucun dossard lisible";
+    ambiance.addEventListener("click", () => {
+      if (decisions.get(cleAmbiance) === "ambiance") decisions.delete(cleAmbiance);
+      else {
+        for (const numero of ajoutsDe(photo.fichier))
+          decisions.delete(photo.fichier + "|" + numero);
+        decisions.set(cleAmbiance, "ambiance");
+      }
+      rendreSans();
+      majAvancement();
+    });
+    boutons.appendChild(ambiance);
+    details.appendChild(boutons);
+
+    bloc.appendChild(details);
+    liste.appendChild(bloc);
+  }
 }
 
 $("zoom").addEventListener("click", () => $("zoom").classList.remove("ouvert"));
@@ -224,7 +386,7 @@ $("exporter").addEventListener("click", () => {
     genere_le: new Date().toISOString(),
     decisions: [...decisions.entries()].map(([cle, decision]) => {
       const [fichier, numero] = cle.split("|");
-      return { fichier, numero, decision };
+      return numero ? { fichier, numero, decision } : { fichier, decision };
     }),
   };
   const blob = new Blob([JSON.stringify(contenu, null, 1)],
@@ -250,13 +412,17 @@ async function demarrer() {
       "paramètre : admin.html?index=output/mon-evenement/index.json";
     return;
   }
-  document.title = "Validation — " + index.evenement.nom;
+  document.title = "Tri — " + index.evenement.nom;
+  dossardsConnus = index.dossards_connus || {};
   for (const photo of index.photos) {
     for (const dossard of photo.dossards) {
-      if (dossard.confiance === "moyenne") cas.push({ photo, dossard });
+      if (dossard.confiance === "moyenne") casIncertains.push({ photo, dossard });
     }
+    if (!photo.dossards.length && !photo.verifiee) photosSans.push({ photo });
   }
-  rendre();
+  rendreIncertains();
+  rendreSans();
+  majAvancement();
 }
 
 demarrer();

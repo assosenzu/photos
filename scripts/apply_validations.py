@@ -7,7 +7,11 @@ Usage :
 Le fichier validations.json est celui exporté par galerie/admin.html.
 Pour chaque décision :
 - "valider" : le dossard passe en confiance haute ;
-- "rejeter" : le dossard est retiré de la photo.
+- "rejeter" : le dossard est retiré de la photo ;
+- "ajouter" : dossard saisi à la main au poste de tri (confiance haute),
+  refusé s'il n'est pas dans la liste des participants ;
+- "ambiance" : photo vérifiée sans dossard lisible — marquée pour ne plus
+  réapparaître dans la liste à trier.
 
 Le journal est réécrit (l'ancien est gardé en journal.jsonl.bak), l'index
 régénéré, et republié sur Supabase sauf si --sans-upload.
@@ -73,24 +77,50 @@ def main():
             "bien été traité sur cette machine ?"
         )
 
-    valides = rejetes = introuvables = 0
+    valides = rejetes = ajouts = ambiances = introuvables = 0
     for decision in decisions:
         fichier = decision.get("fichier")
         numero = decision.get("numero")
         choix = decision.get("decision")
         entree = entrees.get(fichier)
-        cible = None
-        if entree:
-            cible = next(
-                (d for d in entree["dossards"]
-                 if d["numero"] == numero and d["confiance"] == "moyenne"),
-                None,
-            )
+        if entree is None:
+            print(f"Ignoré : photo inconnue du journal ({fichier})")
+            introuvables += 1
+            continue
+
+        if choix == "ambiance":
+            entree["verifiee"] = True
+            ambiances += 1
+            continue
+
+        if choix == "ajouter":
+            if numero not in participants:
+                print(
+                    f"Refusé : {fichier} / dossard {numero} absent de la liste "
+                    "des participants"
+                )
+                introuvables += 1
+            elif any(d["numero"] == numero for d in entree["dossards"]):
+                print(f"Ignoré : {fichier} / dossard {numero} déjà attribué")
+                introuvables += 1
+            else:
+                entree["dossards"].append(
+                    {"numero": numero, "confiance": "haute", "lu": None,
+                     "origine": "manuel"}
+                )
+                entree["verifiee"] = True
+                ajouts += 1
+            continue
+
+        cible = next(
+            (d for d in entree["dossards"]
+             if d["numero"] == numero and d["confiance"] == "moyenne"),
+            None,
+        )
         if cible is None:
             print(f"Ignoré : {fichier} / dossard {numero} (déjà traité ou inconnu)")
             introuvables += 1
-            continue
-        if choix == "valider":
+        elif choix == "valider":
             cible["confiance"] = "haute"
             valides += 1
         elif choix == "rejeter":
@@ -108,11 +138,14 @@ def main():
     index = construire_index(evenement, entrees, participants)
     chemin_index = ecrire_index(index, sortie / "index.json")
 
-    print(
-        f"\n{valides} validation(s), {rejetes} rejet(s)"
-        + (f", {introuvables} ignorée(s)" if introuvables else "")
-        + f". Index régénéré : {chemin_index}"
-    )
+    bilan = [f"{valides} validation(s)", f"{rejetes} rejet(s)"]
+    if ajouts:
+        bilan.append(f"{ajouts} ajout(s) manuel(s)")
+    if ambiances:
+        bilan.append(f"{ambiances} photo(s) d'ambiance")
+    if introuvables:
+        bilan.append(f"{introuvables} ignorée(s)")
+    print(f"\n{', '.join(bilan)}. Index régénéré : {chemin_index}")
 
     if args.sans_upload:
         print("Index non republié (--sans-upload).")

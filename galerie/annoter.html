@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Annotation — vérité terrain</title>
+<style>
+:root {
+  --accent: #2563eb;
+  --fond: #f4f4f2;
+  --carte: #ffffff;
+  --texte: #1d232a;
+  --texte-doux: #6b7280;
+  --alerte: #b45309;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+}
+header { background: #1f2937; color: #fff; padding: 1rem; }
+header h1 { margin: 0; font-size: 1.15rem; }
+header p { margin: .35rem 0 0; opacity: .8; font-size: .85rem; max-width: 60rem; }
+main { max-width: 56rem; margin: 0 auto; padding: 1rem; }
+
+.barre {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: .8rem;
+}
+.barre .avancement { color: var(--texte-doux); }
+#exporter {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: .45rem; padding: .5rem 1rem; cursor: pointer; font-size: .95rem;
+}
+#exporter:disabled { background: #9db4e8; cursor: default; }
+
+.poste {
+  background: var(--carte);
+  border: 1px solid #e2e2de;
+  border-radius: .5rem;
+  padding: 1rem;
+}
+.poste .fichier { color: var(--texte-doux); font-size: .85rem; margin-bottom: .5rem; }
+.poste img {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: .35rem;
+  background: #222;
+}
+.saisie { display: flex; gap: .5rem; margin-top: .8rem; flex-wrap: wrap; }
+.saisie input {
+  flex: 1;
+  min-width: 200px;
+  font-size: 1.15rem;
+  padding: .55rem .8rem;
+  border: 1px solid #cfcfca;
+  border-radius: .45rem;
+}
+.saisie input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.saisie button {
+  border: none; border-radius: .45rem; padding: .55rem 1rem;
+  font-size: .95rem; cursor: pointer; background: #eef0f3;
+}
+.saisie .valider { background: var(--accent); color: #fff; }
+.alerte { color: var(--alerte); font-size: .85rem; min-height: 1.2em; margin: .4rem 0 0; }
+.aide { color: var(--texte-doux); font-size: .82rem; margin-top: .6rem; }
+.fin { text-align: center; padding: 3rem 1rem; color: var(--texte-doux); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Annotation de la vérité terrain</h1>
+  <p>Pour chaque photo, tape tous les numéros de dossard réellement lisibles
+  à l'œil (séparés par des espaces), puis Entrée. L'export sert à
+  <code>scripts/evaluer.py</code> pour mesurer le taux de réussite de la
+  détection automatique. Ce qui a été détecté par la machine ne t'est pas
+  montré, pour ne pas t'influencer.</p>
+</header>
+
+<main>
+  <div class="barre">
+    <span class="avancement" id="avancement">Chargement…</span>
+    <button id="exporter" disabled>Exporter la vérité terrain</button>
+  </div>
+
+  <div class="poste" id="poste" hidden>
+    <div class="fichier" id="fichier"></div>
+    <img id="photo" alt="Photo à annoter">
+    <div class="saisie">
+      <input id="champ" type="text" inputmode="numeric" autocomplete="off"
+             placeholder="Numéros visibles, séparés par des espaces">
+      <button class="valider" id="valider">Valider (Entrée)</button>
+      <button id="aucun">Aucun dossard visible</button>
+      <button id="precedente">‹ Revenir</button>
+    </div>
+    <p class="alerte" id="alerte"></p>
+    <p class="aide">Un numéro absent de la liste des inscrits est signalé mais
+    accepté (panneau, dossard d'une autre course…) — le script d'évaluation
+    n'en tiendra pas rigueur à la détection. Tu peux t'arrêter quand tu veux :
+    l'évaluation ne portera que sur les photos annotées.</p>
+  </div>
+
+  <p class="fin" id="fin" hidden>Toutes les photos sont annotées — exporte la
+  vérité terrain avec le bouton ci-dessus.</p>
+</main>
+
+<script>
+"use strict";
+
+const INDEX_PAR_DEFAUT = "galerie/demo/index.json";
+
+const $ = id => document.getElementById(id);
+let photos = [];
+let dossardsConnus = {};
+let position = 0;
+const annotations = new Map(); // fichier -> [numeros]
+
+function resoudreUrl(chemin) {
+  if (!chemin) return "";
+  if (/^https?:\/\//.test(chemin)) return chemin;
+  return "/" + chemin.replace(/^\/+/, "");
+}
+
+function majAvancement() {
+  $("avancement").textContent =
+    `${annotations.size}/${photos.length} photo(s) annotée(s)`;
+  $("exporter").disabled = annotations.size === 0;
+}
+
+function afficher() {
+  majAvancement();
+  if (position >= photos.length) {
+    $("poste").hidden = true;
+    $("fin").hidden = false;
+    return;
+  }
+  $("poste").hidden = false;
+  $("fin").hidden = true;
+  const photo = photos[position];
+  $("fichier").textContent =
+    `${photo.fichier} — photo ${position + 1}/${photos.length}`;
+  $("photo").src = resoudreUrl(photo.web || photo.miniature);
+  const existante = annotations.get(photo.fichier);
+  $("champ").value = existante ? existante.join(" ") : "";
+  $("alerte").textContent = "";
+  $("champ").focus();
+}
+
+function enregistrer(numeros) {
+  const photo = photos[position];
+  annotations.set(photo.fichier, numeros);
+  position += 1;
+  afficher();
+}
+
+$("valider").addEventListener("click", valider);
+$("champ").addEventListener("keydown", e => { if (e.key === "Enter") valider(); });
+function valider() {
+  const brut = $("champ").value.trim();
+  if (!brut) { $("alerte").textContent = "Tape des numéros, ou « Aucun dossard visible »."; return; }
+  const numeros = [...new Set(brut.split(/[\s,;]+/).filter(Boolean))];
+  const invalide = numeros.find(n => !/^\d{1,5}$/.test(n));
+  if (invalide) {
+    $("alerte").textContent = `« ${invalide} » n'est pas un numéro valide.`;
+    return;
+  }
+  const inconnus = numeros.filter(n => !(n in dossardsConnus));
+  if (inconnus.length && !$("alerte").dataset.confirme) {
+    $("alerte").textContent =
+      `Attention : ${inconnus.join(", ")} absent(s) de la liste des inscrits. ` +
+      "Valide à nouveau pour confirmer.";
+    $("alerte").dataset.confirme = "1";
+    return;
+  }
+  delete $("alerte").dataset.confirme;
+  enregistrer(numeros);
+}
+
+$("aucun").addEventListener("click", () => enregistrer([]));
+$("precedente").addEventListener("click", () => {
+  if (position > 0) { position -= 1; afficher(); }
+});
+
+$("exporter").addEventListener("click", () => {
+  const contenu = {
+    genere_le: new Date().toISOString(),
+    photos: [...annotations.entries()].map(([fichier, dossards]) =>
+      ({ fichier, dossards })),
+  };
+  const blob = new Blob([JSON.stringify(contenu, null, 1)],
+                        { type: "application/json" });
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(blob);
+  lien.download = "verite.json";
+  lien.click();
+  URL.revokeObjectURL(lien.href);
+});
+
+async function demarrer() {
+  const parametres = new URLSearchParams(location.search);
+  const urlIndex = parametres.get("index") || INDEX_PAR_DEFAUT;
+  let index;
+  try {
+    const reponse = await fetch(resoudreUrl(urlIndex));
+    if (!reponse.ok) throw new Error("HTTP " + reponse.status);
+    index = await reponse.json();
+  } catch (e) {
+    $("avancement").textContent =
+      "Impossible de charger l'index (" + e.message + "). Passe son chemin : " +
+      "annoter.html?index=output/mon-evenement/index.json";
+    return;
+  }
+  document.title = "Annotation — " + index.evenement.nom;
+  dossardsConnus = index.dossards_connus || {};
+  photos = index.photos;
+  afficher();
+}
+
+demarrer();
+</script>
+</body>
+</html>

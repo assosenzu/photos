@@ -47,27 +47,28 @@ exactement la même commande : il reprend où il en était sans rien payer deux
 fois. À la fin, il affiche l'adresse publique de l'index ; garde-la, c'est
 elle qu'il faut donner à la galerie.
 
-## 5. Vérifier les dossards incertains
+## 5. Trier ce que la machine n'a pas su lire
 
-Le bilan de fin de traitement indique combien d'attributions sont en
-"confiance moyenne" (numéro à moitié lu, mais un seul inscrit possible).
-Pour les passer en revue :
+Le bilan de fin de traitement donne le nombre de cas à vérifier. Lance un
+petit serveur local :
 
 ```bash
 python -m http.server 8000
 ```
 
 puis ouvre `http://localhost:8000/galerie/admin.html?index=output/run-bike-2026/index.json`.
-Valide ou rejette chaque cas en regardant la photo, exporte les décisions, et
-applique-les :
+Le poste de tri présente deux files : les lectures incertaines (valider ou
+rejeter d'un clic) et les photos sans dossard détecté — regarde-les, saisis le
+numéro quand il est lisible à l'œil, ou marque « aucun dossard lisible » pour
+les photos d'ambiance. Ensuite, exporte les décisions et applique-les :
 
 ```bash
 python scripts/apply_validations.py events/run-bike-2026/event.yaml validations.json
 ```
 
-S'il n'y a que quelques cas, c'est l'affaire de cinq minutes. Tu peux aussi
-sauter cette étape et la faire plus tard : la galerie fonctionne déjà, ces
-photos ressortent simplement avec une confiance moindre.
+Compte une dizaine de secondes par cas. Tu peux aussi faire ce tri en
+plusieurs fois : les cas déjà tranchés ne reviennent pas, et la galerie
+fonctionne déjà pendant ce temps.
 
 ## 6. Mettre la galerie en ligne
 
@@ -80,6 +81,11 @@ Avant d'annoncer le lien aux participants, fais le test de vérité : cherche
 ton propre dossard, ouvre deux ou trois photos, télécharges-en une.
 
 ---
+
+Pour connaître ton taux de réussite sur l'événement (utile en interne et pour
+la communication), annote une centaine de photos avec
+`galerie/annoter.html` puis lance `python scripts/evaluer.py` — la procédure
+détaillée est dans le README, section « Mesurer le taux de réussite ».
 
 Question fréquente : « un participant signale qu'une photo n'est pas de lui ».
 Ouvre `output/{slug}/journal.jsonl`, cherche la ligne du fichier photo

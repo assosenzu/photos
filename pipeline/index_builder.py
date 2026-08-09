@@ -26,15 +26,18 @@ def construire_index(evenement, entrees, participants):
             if d["confiance"] != "haute":
                 dossard["lu"] = d.get("lu", "")
             dossards.append(dossard)
-        photos.append(
-            {
-                "fichier": entree["fichier"],
-                "horodatage": entree.get("horodatage"),
-                "miniature": entree.get("miniature"),
-                "web": entree.get("web"),
-                "dossards": dossards,
-            }
-        )
+        photo = {
+            "fichier": entree["fichier"],
+            "horodatage": entree.get("horodatage"),
+            "miniature": entree.get("miniature"),
+            "web": entree.get("web"),
+            "dossards": dossards,
+        }
+        # Photo passée en revue au poste de tri (permet de ne pas la
+        # représenter dans la liste "sans dossard" de la page admin)
+        if entree.get("verifiee"):
+            photo["verifiee"] = True
+        photos.append(photo)
 
     organisateur = evenement.get("organisateur", {})
     return {
@@ -50,6 +53,12 @@ def construire_index(evenement, entrees, participants):
             "couleurs": organisateur.get("couleurs", {}),
         },
         "genere_le": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        # Numéros valides et leur course (jamais les noms) : sert à la page
+        # admin pour contrôler les saisies manuelles, et équivaut à une
+        # liste de départ, donnée publique dans une course.
+        "dossards_connus": {
+            numero: info.get("course", "") for numero, info in participants.items()
+        },
         "photos": photos,
     }
 
