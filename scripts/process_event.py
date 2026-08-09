@@ -126,10 +126,11 @@ def main():
                 print("Annulé.")
                 return
 
-    watermark = charger_watermark(CHEMIN_WATERMARK)
+    chemin_watermark = evenement["organisateur"]["watermark"] or CHEMIN_WATERMARK
+    watermark = charger_watermark(chemin_watermark)
     if watermark is None and restantes:
         print(
-            f"Pas de logo en {CHEMIN_WATERMARK} : les versions web seront "
+            f"Pas de logo en {chemin_watermark} : les versions web seront "
             "générées sans watermark."
         )
 

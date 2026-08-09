@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validation des dossards incertains</title>
+<style>
+:root {
+  --accent: #2563eb;
+  --valider: #15803d;
+  --rejeter: #b91c1c;
+  --fond: #f4f4f2;
+  --carte: #ffffff;
+  --texte: #1d232a;
+  --texte-doux: #6b7280;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+}
+header {
+  background: #1f2937;
+  color: #fff;
+  padding: 1.2rem 1rem;
+}
+header h1 { margin: 0; font-size: 1.2rem; }
+header p { margin: .4rem 0 0; opacity: .8; font-size: .88rem; max-width: 60rem; }
+main { max-width: 60rem; margin: 0 auto; padding: 1rem; }
+
+.mode-emploi {
+  background: var(--carte);
+  border: 1px solid #e2e2de;
+  border-radius: .5rem;
+  padding: .9rem 1.1rem;
+  font-size: .9rem;
+  color: var(--texte-doux);
+  margin-bottom: 1rem;
+}
+.mode-emploi code {
+  background: #eef0f3;
+  padding: .1rem .35rem;
+  border-radius: .25rem;
+  color: var(--texte);
+}
+
+.barre-etat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.barre-etat .avancement { color: var(--texte-doux); }
+#exporter {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: .45rem;
+  padding: .55rem 1.1rem;
+  font-size: .95rem;
+  cursor: pointer;
+}
+#exporter:disabled { background: #9db4e8; cursor: default; }
+
+.cas {
+  display: flex;
+  gap: 1rem;
+  background: var(--carte);
+  border: 1px solid #e2e2de;
+  border-radius: .5rem;
+  padding: .8rem;
+  margin-bottom: .8rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cas img {
+  width: 220px;
+  max-width: 100%;
+  border-radius: .35rem;
+  cursor: zoom-in;
+}
+.cas .details { flex: 1; min-width: 220px; }
+.cas .fichier { color: var(--texte-doux); font-size: .82rem; }
+.cas .proposition { font-size: 1.05rem; margin: .4rem 0; }
+.cas .proposition strong { font-size: 1.25rem; }
+.cas .boutons { display: flex; gap: .5rem; }
+.cas button {
+  border: 2px solid transparent;
+  border-radius: .45rem;
+  padding: .5rem 1rem;
+  font-size: .95rem;
+  cursor: pointer;
+  background: #eef0f3;
+}
+.cas button.valider.choisi { background: var(--valider); color: #fff; }
+.cas button.rejeter.choisi { background: var(--rejeter); color: #fff; }
+.cas.tranche { opacity: .75; }
+.vide { text-align: center; color: var(--texte-doux); padding: 3rem 1rem; }
+
+.zoom {
+  position: fixed; inset: 0; background: rgba(10,14,20,.92);
+  display: none; align-items: center; justify-content: center; z-index: 40;
+  cursor: zoom-out;
+}
+.zoom.ouvert { display: flex; }
+.zoom img { max-width: 96%; max-height: 96%; border-radius: .3rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Validation des dossards incertains</h1>
+  <p>Chaque cas ci-dessous est une lecture partielle : l'OCR n'a lu qu'un
+  morceau de numéro, mais un seul dossard inscrit peut correspondre. À toi de
+  confirmer sur la photo.</p>
+</header>
+
+<main>
+  <div class="mode-emploi" id="mode-emploi">
+    Tranche chaque cas (la photo s'agrandit au clic), puis
+    <em>Exporter les décisions</em> : un fichier <code>validations.json</code>
+    est téléchargé. Applique-le avec
+    <code id="commande">python scripts/apply_validations.py events/…/event.yaml
+    validations.json</code> — les dossards validés passent en confiance haute,
+    les rejetés sont retirés, et l'index est régénéré puis republié.
+  </div>
+
+  <div class="barre-etat">
+    <span class="avancement" id="avancement">Chargement…</span>
+    <button id="exporter" disabled>Exporter les décisions</button>
+  </div>
+
+  <div id="liste"></div>
+  <p class="vide" id="vide" hidden>Aucun cas à valider dans cet index — tout
+  a été lu avec une confiance haute.</p>
+</main>
+
+<div class="zoom" id="zoom"><img id="zoom-image" alt="Photo agrandie"></div>
+
+<script>
+"use strict";
+
+// Par défaut on charge l'index local du dernier traitement ; on peut viser
+// un autre fichier avec ?index=chemin/vers/index.json
+const INDEX_PAR_DEFAUT = "galerie/demo/index.json";
+
+const $ = id => document.getElementById(id);
+const decisions = new Map(); // "fichier|numero" -> "valider" | "rejeter"
+let cas = [];
+
+function resoudreUrl(chemin) {
+  if (!chemin) return "";
+  if (/^https?:\/\//.test(chemin)) return chemin;
+  return "/" + chemin.replace(/^\/+/, "");
+}
+
+function majAvancement() {
+  $("avancement").textContent =
+    `${cas.length} cas à examiner — ${decisions.size} tranché(s)`;
+  $("exporter").disabled = decisions.size === 0;
+}
+
+function rendre() {
+  const liste = $("liste");
+  liste.innerHTML = "";
+  $("vide").hidden = cas.length > 0;
+
+  for (const c of cas) {
+    const cle = c.photo.fichier + "|" + c.dossard.numero;
+    const bloc = document.createElement("div");
+    bloc.className = "cas" + (decisions.has(cle) ? " tranche" : "");
+
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.src = resoudreUrl(c.photo.web || c.photo.miniature);
+    img.alt = c.photo.fichier;
+    img.addEventListener("click", () => {
+      $("zoom-image").src = img.src;
+      $("zoom").classList.add("ouvert");
+    });
+    bloc.appendChild(img);
+
+    const details = document.createElement("div");
+    details.className = "details";
+    const heure = c.photo.horodatage
+      ? " · " + c.photo.horodatage.slice(11, 16).replace(":", "h") : "";
+    details.innerHTML =
+      `<div class="fichier">${c.photo.fichier}${heure}</div>
+       <div class="proposition">Lu « ${c.dossard.lu ?? "?"} » →
+       dossard proposé <strong>${c.dossard.numero}</strong>
+       ${c.dossard.course ? "(" + c.dossard.course + ")" : ""}</div>`;
+
+    const boutons = document.createElement("div");
+    boutons.className = "boutons";
+    for (const [decision, libelle] of [["valider", "Valider"], ["rejeter", "Rejeter"]]) {
+      const b = document.createElement("button");
+      b.className = decision + (decisions.get(cle) === decision ? " choisi" : "");
+      b.textContent = libelle;
+      b.addEventListener("click", () => {
+        if (decisions.get(cle) === decision) decisions.delete(cle);
+        else decisions.set(cle, decision);
+        majAvancement();
+        rendre();
+      });
+      boutons.appendChild(b);
+    }
+    details.appendChild(boutons);
+    bloc.appendChild(details);
+    liste.appendChild(bloc);
+  }
+  majAvancement();
+}
+
+$("zoom").addEventListener("click", () => $("zoom").classList.remove("ouvert"));
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") $("zoom").classList.remove("ouvert");
+});
+
+$("exporter").addEventListener("click", () => {
+  const contenu = {
+    genere_le: new Date().toISOString(),
+    decisions: [...decisions.entries()].map(([cle, decision]) => {
+      const [fichier, numero] = cle.split("|");
+      return { fichier, numero, decision };
+    }),
+  };
+  const blob = new Blob([JSON.stringify(contenu, null, 1)],
+                        { type: "application/json" });
+  const lien = document.createElement("a");
+  lien.href = URL.createObjectURL(blob);
+  lien.download = "validations.json";
+  lien.click();
+  URL.revokeObjectURL(lien.href);
+});
+
+async function demarrer() {
+  const parametres = new URLSearchParams(location.search);
+  const urlIndex = parametres.get("index") || INDEX_PAR_DEFAUT;
+  let index;
+  try {
+    const reponse = await fetch(resoudreUrl(urlIndex));
+    if (!reponse.ok) throw new Error("HTTP " + reponse.status);
+    index = await reponse.json();
+  } catch (e) {
+    $("avancement").textContent =
+      "Impossible de charger l'index (" + e.message + "). Passe son chemin en " +
+      "paramètre : admin.html?index=output/mon-evenement/index.json";
+    return;
+  }
+  document.title = "Validation — " + index.evenement.nom;
+  for (const photo of index.photos) {
+    for (const dossard of photo.dossards) {
+      if (dossard.confiance === "moyenne") cas.push({ photo, dossard });
+    }
+  }
+  rendre();
+}
+
+demarrer();
+</script>
+</body>
+</html>

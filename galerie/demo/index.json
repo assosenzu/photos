@@ -1,0 +1,181 @@
+{
+ "evenement": {
+  "slug": "demo",
+  "nom": "La Pauléenne 2026 (démo)",
+  "date": "2026-05-17",
+  "courses": [
+   "5km",
+   "10km",
+   "rando"
+  ]
+ },
+ "organisateur": {
+  "nom": "SENZU Sport Expérience",
+  "site": "https://senzu-asso.fr",
+  "couleurs": {
+   "accent": "#e27410",
+   "accent_fonce": "#b85c0a",
+   "entete": "#16212e"
+  }
+ },
+ "genere_le": "2026-05-17T18:00:00+00:00",
+ "photos": [
+  {
+   "fichier": "demo_001.jpg",
+   "horodatage": "2026-05-17T09:02:11",
+   "miniature": "galerie/demo/thumbs/demo_001.jpg",
+   "web": "galerie/demo/web/demo_001.jpg",
+   "dossards": [
+    {
+     "numero": "101",
+     "confiance": "haute",
+     "course": "5km"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_002.jpg",
+   "horodatage": "2026-05-17T09:05:43",
+   "miniature": "galerie/demo/thumbs/demo_002.jpg",
+   "web": "galerie/demo/web/demo_002.jpg",
+   "dossards": [
+    {
+     "numero": "102",
+     "confiance": "haute",
+     "course": "5km"
+    },
+    {
+     "numero": "103",
+     "confiance": "haute",
+     "course": "5km"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_003.jpg",
+   "horodatage": "2026-05-17T09:14:27",
+   "miniature": "galerie/demo/thumbs/demo_003.jpg",
+   "web": "galerie/demo/web/demo_003.jpg",
+   "dossards": [
+    {
+     "numero": "115",
+     "confiance": "moyenne",
+     "course": "5km",
+     "lu": "11"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_004.jpg",
+   "horodatage": "2026-05-17T09:31:05",
+   "miniature": "galerie/demo/thumbs/demo_004.jpg",
+   "web": "galerie/demo/web/demo_004.jpg",
+   "dossards": [
+    {
+     "numero": "103",
+     "confiance": "haute",
+     "course": "5km"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_005.jpg",
+   "horodatage": "2026-05-17T10:03:18",
+   "miniature": "galerie/demo/thumbs/demo_005.jpg",
+   "web": "galerie/demo/web/demo_005.jpg",
+   "dossards": [
+    {
+     "numero": "230",
+     "confiance": "haute",
+     "course": "10km"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_006.jpg",
+   "horodatage": "2026-05-17T10:08:52",
+   "miniature": "galerie/demo/thumbs/demo_006.jpg",
+   "web": "galerie/demo/web/demo_006.jpg",
+   "dossards": [
+    {
+     "numero": "231",
+     "confiance": "haute",
+     "course": "10km"
+    },
+    {
+     "numero": "245",
+     "confiance": "haute",
+     "course": "10km"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_007.jpg",
+   "horodatage": "2026-05-17T10:22:40",
+   "miniature": "galerie/demo/thumbs/demo_007.jpg",
+   "web": "galerie/demo/web/demo_007.jpg",
+   "dossards": [
+    {
+     "numero": "258",
+     "confiance": "moyenne",
+     "course": "10km",
+     "lu": "58"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_008.jpg",
+   "horodatage": "2026-05-17T10:47:09",
+   "miniature": "galerie/demo/thumbs/demo_008.jpg",
+   "web": "galerie/demo/web/demo_008.jpg",
+   "dossards": [
+    {
+     "numero": "245",
+     "confiance": "haute",
+     "course": "10km"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_009.jpg",
+   "horodatage": "2026-05-17T11:12:33",
+   "miniature": "galerie/demo/thumbs/demo_009.jpg",
+   "web": "galerie/demo/web/demo_009.jpg",
+   "dossards": [
+    {
+     "numero": "501",
+     "confiance": "haute",
+     "course": "rando"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_010.jpg",
+   "horodatage": "2026-05-17T11:19:06",
+   "miniature": "galerie/demo/thumbs/demo_010.jpg",
+   "web": "galerie/demo/web/demo_010.jpg",
+   "dossards": [
+    {
+     "numero": "502",
+     "confiance": "moyenne",
+     "course": "rando",
+     "lu": "50"
+    }
+   ]
+  },
+  {
+   "fichier": "demo_011.jpg",
+   "horodatage": "2026-05-17T11:26:54",
+   "miniature": "galerie/demo/thumbs/demo_011.jpg",
+   "web": "galerie/demo/web/demo_011.jpg",
+   "dossards": []
+  },
+  {
+   "fichier": "demo_012.jpg",
+   "horodatage": null,
+   "miniature": "galerie/demo/thumbs/demo_012.jpg",
+   "web": "galerie/demo/web/demo_012.jpg",
+   "dossards": []
+  }
+ ]
+}

@@ -36,12 +36,18 @@ def construire_index(evenement, entrees, participants):
             }
         )
 
+    organisateur = evenement.get("organisateur", {})
     return {
         "evenement": {
             "slug": evenement["slug"],
             "nom": evenement["nom"],
             "date": evenement["date"],
             "courses": evenement["courses"],
+        },
+        "organisateur": {
+            "nom": organisateur.get("nom", ""),
+            "site": organisateur.get("site", ""),
+            "couleurs": organisateur.get("couleurs", {}),
         },
         "genere_le": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "photos": photos,

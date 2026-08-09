@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photos de l'événement</title>
+<style>
+/* ------------------------------------------------------------------
+   Palette neutre par défaut. Chaque organisateur la personnalise via le
+   bloc `organisateur.couleurs` de son event.yaml : les valeurs arrivent
+   dans index.json et sont appliquées au chargement, sans toucher ici.
+   ------------------------------------------------------------------ */
+:root {
+  --accent: #2563eb;        /* couleur principale (boutons, surlignages) */
+  --accent-fonce: #1d4ed8;
+  --entete-fond: #1f2937;   /* bandeau du haut */
+  --entete-texte: #ffffff;
+  --fond: #f4f4f2;
+  --carte: #ffffff;
+  --texte: #1d232a;
+  --texte-doux: #6b7280;
+  --confiance-moyenne: #b45309;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+}
+
+header {
+  background: var(--entete-fond);
+  color: var(--entete-texte);
+  padding: 1.6rem 1rem 1.9rem;
+  text-align: center;
+}
+header .asso {
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-size: .78rem;
+  opacity: .75;
+  margin-bottom: .35rem;
+}
+header h1 { margin: 0 0 .2rem; font-size: 1.6rem; }
+header .date { opacity: .75; font-size: .9rem; }
+
+.recherche {
+  max-width: 430px;
+  margin: 1.2rem auto 0;
+  display: flex;
+  gap: .5rem;
+}
+.recherche input {
+  flex: 1;
+  font-size: 1.25rem;
+  padding: .65rem 1rem;
+  border: 2px solid transparent;
+  border-radius: .6rem;
+  text-align: center;
+  outline: none;
+}
+.recherche input:focus { border-color: var(--accent); }
+.recherche button {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  padding: 0 1.1rem;
+  border-radius: .6rem;
+  cursor: pointer;
+}
+.recherche button:hover { background: var(--accent-fonce); }
+
+.filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  justify-content: center;
+  padding: 1rem 1rem 0;
+}
+.filtres .groupe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  justify-content: center;
+}
+.filtres .separateur { flex-basis: 100%; height: 0; }
+.puce {
+  border: 1px solid #d4d4d0;
+  background: var(--carte);
+  color: var(--texte);
+  border-radius: 2rem;
+  padding: .32rem .85rem;
+  font-size: .85rem;
+  cursor: pointer;
+}
+.puce:hover { border-color: var(--accent); }
+.puce.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.compteur {
+  text-align: center;
+  padding: 1rem;
+  color: var(--texte-doux);
+}
+.compteur strong { color: var(--texte); }
+
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: .6rem;
+  padding: 0 .8rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.carte-photo {
+  position: relative;
+  border-radius: .5rem;
+  overflow: hidden;
+  background: #ddd;
+  cursor: pointer;
+  aspect-ratio: 4 / 3;
+}
+.carte-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.carte-photo .heure {
+  position: absolute;
+  left: .4rem;
+  bottom: .4rem;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: .72rem;
+  padding: .1rem .45rem;
+  border-radius: .3rem;
+}
+.carte-photo .telecharger {
+  position: absolute;
+  right: .4rem;
+  bottom: .4rem;
+  background: rgba(0,0,0,.55);
+  border: none;
+  color: #fff;
+  border-radius: .3rem;
+  padding: .15rem .5rem;
+  font-size: .8rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.carte-photo:hover .telecharger, .carte-photo:focus-within .telecharger { opacity: 1; }
+
+.vide {
+  text-align: center;
+  color: var(--texte-doux);
+  padding: 3rem 1rem;
+}
+
+/* Lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 20, .93);
+  display: none;
+  flex-direction: column;
+  z-index: 50;
+}
+.lightbox.ouverte { display: flex; }
+.lightbox .scene {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: .5rem;
+}
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: .3rem;
+}
+.lightbox .barre {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #d7dce2;
+  padding: .6rem 1rem 1rem;
+  font-size: .9rem;
+  flex-wrap: wrap;
+}
+.lightbox button {
+  background: rgba(255,255,255,.12);
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  padding: .45rem .9rem;
+  border-radius: .4rem;
+  cursor: pointer;
+}
+.lightbox button:hover { background: rgba(255,255,255,.25); }
+.lightbox .telechargement { background: var(--accent); }
+.lightbox .telechargement:hover { background: var(--accent-fonce); }
+.lightbox .fermer {
+  position: absolute;
+  top: .8rem;
+  right: .9rem;
+  font-size: 1.3rem;
+}
+.lightbox .fleche {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  padding: .8rem .7rem;
+}
+.lightbox .precedente { left: .5rem; }
+.lightbox .suivante { right: .5rem; }
+
+footer {
+  text-align: center;
+  color: var(--texte-doux);
+  font-size: .8rem;
+  padding: 1.5rem 1rem 2rem;
+}
+footer a { color: var(--texte-doux); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="asso" id="nom-organisateur" hidden></div>
+  <h1 id="titre-evenement">Photos de l'événement</h1>
+  <div class="date" id="date-evenement"></div>
+  <div class="recherche">
+    <input id="champ-dossard" type="text" inputmode="numeric" autocomplete="off"
+           placeholder="Ton numéro de dossard…" aria-label="Numéro de dossard">
+    <button id="bouton-effacer" title="Effacer la recherche">Effacer</button>
+  </div>
+</header>
+
+<nav class="filtres" id="filtres" aria-label="Filtres"></nav>
+<p class="compteur" id="compteur">Chargement des photos…</p>
+<main class="grille" id="grille"></main>
+<p class="vide" id="vide" hidden></p>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+  <button class="fermer" id="lb-fermer" title="Fermer (Échap)">✕</button>
+  <button class="fleche precedente" id="lb-precedente" title="Photo précédente">‹</button>
+  <button class="fleche suivante" id="lb-suivante" title="Photo suivante">›</button>
+  <div class="scene"><img id="lb-image" alt="Photo de l'événement"></div>
+  <div class="barre">
+    <span id="lb-infos"></span>
+    <button class="telechargement" id="lb-telecharger">Télécharger</button>
+  </div>
+</div>
+
+<footer>
+  Recherche par lecture automatique des numéros de dossard, sans
+  reconnaissance faciale.<br>
+  <span id="pied-contact" hidden>Un dossard mal attribué, une photo à
+  retirer ? Contacte l'organisateur : <a id="pied-lien" href=""></a>.</span>
+</footer>
+
+<script>
+"use strict";
+
+// URL de l'index à charger. En production, remplacer par l'URL publique
+// Supabase de l'index (…/photos-{slug}/index.json) ou passer ?index=… dans
+// l'adresse. Par défaut : le jeu de démonstration.
+const INDEX_PAR_DEFAUT = "galerie/demo/index.json";
+
+const etat = { photos: [], dossard: "", course: null, tranche: null };
+let visibles = [];
+
+const $ = id => document.getElementById(id);
+
+function resoudreUrl(chemin) {
+  if (!chemin) return "";
+  if (/^https?:\/\//.test(chemin)) return chemin;
+  return "/" + chemin.replace(/^\/+/, "");
+}
+
+function heureCourte(horodatage) {
+  return horodatage ? horodatage.slice(11, 16).replace(":", "h") : "";
+}
+
+function trancheDe(photo) {
+  return photo.horodatage ? photo.horodatage.slice(11, 13) : null;
+}
+
+function coursesDe(photo) {
+  return [...new Set(photo.dossards.map(d => d.course).filter(Boolean))];
+}
+
+function filtrer() {
+  return etat.photos.filter(p => {
+    if (etat.dossard && !p.dossards.some(d => d.numero === etat.dossard)) return false;
+    if (etat.course && !coursesDe(p).includes(etat.course)) return false;
+    if (etat.tranche !== null && trancheDe(p) !== etat.tranche) return false;
+    return true;
+  });
+}
+
+function rendreFiltres(evenement) {
+  const nav = $("filtres");
+  nav.innerHTML = "";
+
+  const puce = (libelle, actif, action) => {
+    const b = document.createElement("button");
+    b.className = "puce" + (actif ? " active" : "");
+    b.textContent = libelle;
+    b.addEventListener("click", action);
+    return b;
+  };
+
+  const groupeCourses = document.createElement("div");
+  groupeCourses.className = "groupe";
+  groupeCourses.appendChild(puce("Toutes les courses", etat.course === null,
+    () => { etat.course = null; rafraichir(); }));
+  for (const course of evenement.courses) {
+    groupeCourses.appendChild(puce(course, etat.course === course,
+      () => { etat.course = etat.course === course ? null : course; rafraichir(); }));
+  }
+  nav.appendChild(groupeCourses);
+
+  const separateur = document.createElement("div");
+  separateur.className = "separateur";
+  nav.appendChild(separateur);
+
+  const tranches = [...new Set(etat.photos.map(trancheDe).filter(t => t !== null))].sort();
+  if (tranches.length > 1) {
+    const groupeHeures = document.createElement("div");
+    groupeHeures.className = "groupe";
+    groupeHeures.appendChild(puce("Toute la journée", etat.tranche === null,
+      () => { etat.tranche = null; rafraichir(); }));
+    for (const t of tranches) {
+      const nb = etat.photos.filter(p => trancheDe(p) === t).length;
+      groupeHeures.appendChild(puce(`${Number(t)}h (${nb})`, etat.tranche === t,
+        () => { etat.tranche = etat.tranche === t ? null : t; rafraichir(); }));
+    }
+    nav.appendChild(groupeHeures);
+  }
+}
+
+function rendreCompteur() {
+  const c = $("compteur");
+  const n = visibles.length;
+  if (etat.dossard) {
+    c.innerHTML = n
+      ? `<strong>${n}</strong> photo${n > 1 ? "s" : ""} trouvée${n > 1 ? "s" : ""} pour le dossard <strong>${etat.dossard}</strong>`
+      : `Aucune photo pour le dossard <strong>${etat.dossard}</strong>`;
+  } else {
+    c.innerHTML = `<strong>${n}</strong> photo${n > 1 ? "s" : ""}`;
+  }
+  const vide = $("vide");
+  if (!n) {
+    vide.hidden = false;
+    vide.textContent = etat.dossard
+      ? "Vérifie le numéro… ou peut-être que les photographes t'ont raté ! Essaie aussi sans filtre de course ou d'heure."
+      : "Aucune photo ne correspond aux filtres choisis.";
+  } else {
+    vide.hidden = true;
+  }
+}
+
+function telecharger(url, nom) {
+  fetch(url)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+    .then(blob => {
+      const lien = document.createElement("a");
+      lien.href = URL.createObjectURL(blob);
+      lien.download = nom;
+      lien.click();
+      URL.revokeObjectURL(lien.href);
+    })
+    .catch(() => window.open(url, "_blank"));
+}
+
+function rendreGrille() {
+  const grille = $("grille");
+  grille.innerHTML = "";
+  visibles.forEach((photo, i) => {
+    const carte = document.createElement("figure");
+    carte.className = "carte-photo";
+    carte.style.margin = 0;
+
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.src = resoudreUrl(photo.miniature);
+    img.alt = "Photo " + photo.fichier;
+    carte.appendChild(img);
+
+    if (photo.horodatage) {
+      const heure = document.createElement("span");
+      heure.className = "heure";
+      heure.textContent = heureCourte(photo.horodatage);
+      carte.appendChild(heure);
+    }
+
+    const bouton = document.createElement("button");
+    bouton.className = "telecharger";
+    bouton.textContent = "⤓";
+    bouton.title = "Télécharger la photo";
+    bouton.addEventListener("click", e => {
+      e.stopPropagation();
+      telecharger(resoudreUrl(photo.web), photo.fichier);
+    });
+    carte.appendChild(bouton);
+
+    carte.addEventListener("click", () => ouvrirLightbox(i));
+    grille.appendChild(carte);
+  });
+}
+
+function rafraichir() {
+  visibles = filtrer();
+  rendreFiltres(indexCharge.evenement);
+  rendreCompteur();
+  rendreGrille();
+}
+
+/* --- Lightbox --- */
+let lightboxIndex = 0;
+
+function ouvrirLightbox(i) {
+  lightboxIndex = i;
+  majLightbox();
+  $("lightbox").classList.add("ouverte");
+  document.body.style.overflow = "hidden";
+}
+function fermerLightbox() {
+  $("lightbox").classList.remove("ouverte");
+  document.body.style.overflow = "";
+}
+function majLightbox() {
+  const photo = visibles[lightboxIndex];
+  if (!photo) return;
+  $("lb-image").src = resoudreUrl(photo.web);
+  const morceaux = [];
+  if (photo.horodatage) morceaux.push(heureCourte(photo.horodatage));
+  if (photo.dossards.length)
+    morceaux.push("Dossard" + (photo.dossards.length > 1 ? "s" : "") + " " +
+      photo.dossards.map(d => d.numero).join(", "));
+  morceaux.push(`${lightboxIndex + 1}/${visibles.length}`);
+  $("lb-infos").textContent = morceaux.join(" · ");
+}
+function naviguer(delta) {
+  if (!visibles.length) return;
+  lightboxIndex = (lightboxIndex + delta + visibles.length) % visibles.length;
+  majLightbox();
+}
+
+$("lb-fermer").addEventListener("click", fermerLightbox);
+$("lb-precedente").addEventListener("click", () => naviguer(-1));
+$("lb-suivante").addEventListener("click", () => naviguer(1));
+$("lb-telecharger").addEventListener("click", () => {
+  const photo = visibles[lightboxIndex];
+  if (photo) telecharger(resoudreUrl(photo.web), photo.fichier);
+});
+$("lightbox").addEventListener("click", e => {
+  if (e.target === $("lightbox") || e.target.classList.contains("scene")) fermerLightbox();
+});
+document.addEventListener("keydown", e => {
+  if (!$("lightbox").classList.contains("ouverte")) return;
+  if (e.key === "Escape") fermerLightbox();
+  if (e.key === "ArrowLeft") naviguer(-1);
+  if (e.key === "ArrowRight") naviguer(1);
+});
+
+/* --- Recherche --- */
+$("champ-dossard").addEventListener("input", e => {
+  etat.dossard = e.target.value.replace(/\D/g, "");
+  if (e.target.value !== etat.dossard) e.target.value = etat.dossard;
+  rafraichir();
+});
+$("bouton-effacer").addEventListener("click", () => {
+  $("champ-dossard").value = "";
+  etat.dossard = "";
+  rafraichir();
+});
+
+/* --- Chargement --- */
+let indexCharge = null;
+
+async function demarrer() {
+  const parametres = new URLSearchParams(location.search);
+  const urlIndex = parametres.get("index") || INDEX_PAR_DEFAUT;
+  try {
+    const reponse = await fetch(resoudreUrl(urlIndex));
+    if (!reponse.ok) throw new Error("HTTP " + reponse.status);
+    indexCharge = await reponse.json();
+  } catch (e) {
+    $("compteur").textContent =
+      "Impossible de charger les photos (" + e.message + "). Réessaie plus tard.";
+    return;
+  }
+  etat.photos = indexCharge.photos;
+  $("titre-evenement").textContent = indexCharge.evenement.nom;
+  if (indexCharge.evenement.date) {
+    $("date-evenement").textContent = new Date(indexCharge.evenement.date)
+      .toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+  document.title = "Photos — " + indexCharge.evenement.nom;
+  appliquerIdentite(indexCharge.organisateur || {});
+  rafraichir();
+}
+
+function appliquerIdentite(organisateur) {
+  if (organisateur.nom) {
+    $("nom-organisateur").textContent = organisateur.nom;
+    $("nom-organisateur").hidden = false;
+    document.title += " · " + organisateur.nom;
+  }
+  if (organisateur.site) {
+    $("pied-lien").href = organisateur.site;
+    $("pied-lien").textContent = organisateur.site.replace(/^https?:\/\//, "");
+    $("pied-contact").hidden = false;
+  }
+  const correspondance = {
+    accent: "--accent",
+    accent_fonce: "--accent-fonce",
+    entete: "--entete-fond",
+    entete_texte: "--entete-texte",
+    fond: "--fond",
+  };
+  const couleurs = organisateur.couleurs || {};
+  for (const [cle, variable] of Object.entries(correspondance)) {
+    // uniquement des couleurs (pas d'injection de CSS arbitraire)
+    if (/^#[0-9a-fA-F]{3,8}$/.test(couleurs[cle] || "")) {
+      document.documentElement.style.setProperty(variable, couleurs[cle]);
+    }
+  }
+}
+
+demarrer();
+</script>
+</body>
+</html>

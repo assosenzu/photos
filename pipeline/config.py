@@ -60,10 +60,27 @@ def charger_evenement(chemin):
             f"CSV des participants introuvable : '{csv_brut}' (déclaré dans {p})."
         )
 
+    # Identité de l'organisateur : tout est optionnel, la galerie a des
+    # valeurs neutres par défaut. C'est ce qui rend l'outil utilisable par
+    # n'importe quel club ou organisateur sans toucher au code.
+    organisateur_brut = data.get("organisateur") or {}
+    if not isinstance(organisateur_brut, dict):
+        raise ErreurConfig(f"'organisateur' doit être un bloc clé/valeur dans {p}.")
+    couleurs_brut = organisateur_brut.get("couleurs") or {}
+    organisateur = {
+        "nom": str(organisateur_brut.get("nom", "") or "").strip(),
+        "site": str(organisateur_brut.get("site", "") or "").strip(),
+        "couleurs": {
+            str(k): str(v).strip() for k, v in couleurs_brut.items() if v
+        },
+        "watermark": str(organisateur_brut.get("watermark", "") or "").strip(),
+    }
+
     return {
         "slug": slug,
         "nom": str(data["nom"]).strip(),
         "date": str(data.get("date", "")).strip(),
         "courses": [c.strip() for c in data["courses"]],
         "participants_csv": str(csv_final),
+        "organisateur": organisateur,
     }

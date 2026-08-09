@@ -12,18 +12,24 @@ dans `events/` avec sa configuration et sa liste de participants.
 
 ## Où on en est
 
-Le pipeline de traitement est fonctionnel : OCR, validation par la liste des
+Pipeline et galerie sont fonctionnels : OCR, validation par la liste des
 inscrits, récupération des lectures partielles, miniatures, watermark
-(optionnel), upload Supabase et génération de l'index. Reste à venir : la
-galerie web et la page admin de validation.
+(optionnel), upload Supabase, index, galerie de recherche par dossard et page
+admin de validation. L'outil est générique : toute l'identité (nom, site,
+couleurs, logo) se règle dans l'`event.yaml` de chaque organisateur, le code
+ne contient rien de spécifique à SENZU.
 
 ## Contenu du dépôt
 
 ```
 events/exemple/       exemple de configuration d'événement (event.yaml + participants.csv)
 pipeline/             les briques du traitement (OCR, validation, images, upload…)
+galerie/index.html    la galerie publique (recherche par dossard)
+galerie/admin.html    la page de validation des lectures incertaines
+galerie/demo/         jeu de démonstration pour tester la galerie sans rien configurer
 scripts/test_vision.py     test de l'OCR sur quelques photos
 scripts/process_event.py   le pipeline complet d'un événement
+scripts/apply_validations.py   applique les décisions de la page admin
 input/                déposer ici les photos à traiter (jamais versionnées)
 secrets/              déposer ici la clé Google Cloud (jamais versionnée)
 assets/               logo pour le watermark (optionnel, voir plus bas)
@@ -198,6 +204,53 @@ Autres options : `--dossier` pour lire les photos ailleurs que dans `input/`,
 `--debit` pour ralentir les appels à Vision (5 par seconde par défaut),
 `--workers` pour le nombre de photos traitées en parallèle, `--oui` pour
 passer la confirmation.
+
+## La galerie
+
+Une seule page, sans framework ni dépendance : `galerie/index.html`. Elle
+charge un `index.json` et offre la recherche par numéro de dossard, les
+filtres par course et par tranche horaire, une lightbox et le téléchargement.
+L'habillage (nom de l'organisateur, lien de contact, couleurs) vient du bloc
+`organisateur` de l'`event.yaml` — sans ce bloc elle reste neutre.
+
+Pour l'essayer tout de suite avec le jeu de démonstration, depuis la racine
+du projet :
+
+```bash
+python -m http.server 8000
+```
+
+puis ouvre `http://localhost:8000/galerie/` dans le navigateur (dans un
+Codespace, VS Code propose automatiquement d'ouvrir le port). Pour visualiser
+un vrai événement traité en local :
+`http://localhost:8000/galerie/?index=output/mon-evenement/index.json`.
+
+En production, on dépose `galerie/index.html` sur n'importe quel hébergement
+(le site de l'organisateur, GitHub Pages…) et on remplace la constante
+`INDEX_PAR_DEFAUT` en tête de son script par l'URL publique de l'index
+Supabase, affichée à la fin du traitement.
+
+## Valider les lectures incertaines
+
+Après un traitement, certains dossards sont attribués en "confiance moyenne" :
+l'OCR n'a lu qu'un morceau de numéro qui ne peut correspondre qu'à un seul
+inscrit. La page `galerie/admin.html` (à ouvrir en local, même serveur que
+ci-dessus) les liste photo par photo :
+
+```
+http://localhost:8000/galerie/admin.html?index=output/mon-evenement/index.json
+```
+
+On valide ou rejette chaque cas, on clique sur *Exporter les décisions* (ça
+télécharge un `validations.json`), puis :
+
+```bash
+python scripts/apply_validations.py events/mon-evenement/event.yaml validations.json
+```
+
+Les dossards validés passent en confiance haute, les rejetés disparaissent,
+et l'index est régénéré puis republié sur Supabase. Cette page est un outil
+interne : elle n'est pas destinée à être mise en ligne.
 
 ## Le watermark
 
