@@ -12,18 +12,22 @@ dans `events/` avec sa configuration et sa liste de participants.
 
 ## Où on en est
 
-Phase 1 (ce dépôt aujourd'hui) : la structure, la configuration Google Cloud
-et un script de test qui analyse 5 photos pour vérifier que tout marche.
-Les phases suivantes ajouteront le pipeline complet (miniatures, watermark,
-upload Supabase), la galerie et la documentation d'exploitation.
+Le pipeline de traitement est fonctionnel : OCR, validation par la liste des
+inscrits, récupération des lectures partielles, miniatures, watermark
+(optionnel), upload Supabase et génération de l'index. Reste à venir : la
+galerie web et la page admin de validation.
 
 ## Contenu du dépôt
 
 ```
 events/exemple/       exemple de configuration d'événement (event.yaml + participants.csv)
-scripts/test_vision.py   script de test de l'OCR sur quelques photos
-input/                déposer ici les photos à analyser (jamais versionnées)
+pipeline/             les briques du traitement (OCR, validation, images, upload…)
+scripts/test_vision.py     test de l'OCR sur quelques photos
+scripts/process_event.py   le pipeline complet d'un événement
+input/                déposer ici les photos à traiter (jamais versionnées)
 secrets/              déposer ici la clé Google Cloud (jamais versionnée)
+assets/               logo pour le watermark (optionnel, voir plus bas)
+output/               fichiers générés : miniatures, index, journal (jamais versionnés)
 .env.example          modèle de configuration, à copier en .env
 requirements.txt      dépendances Python
 ```
@@ -130,9 +134,76 @@ colonnes `dossard,nom,course` (voir `events/exemple/participants.csv`).
 Si le script affiche une erreur, le message indique l'étape du README à
 reprendre (clé manquante, facturation, API non activée…).
 
-## Préparer un événement
+## Créer le projet Supabase
 
-Copie le dossier `events/exemple/` sous un nouveau nom, par exemple
-`events/pauleenne-2026/`, et adapte `event.yaml` : slug, nom, date, liste des
-courses et chemin du CSV. C'est ce fichier qui pilotera tout le pipeline en
-phase 2.
+C'est là que sont hébergées les photos traitées (miniatures et versions web)
+ainsi que l'index que la galerie interroge. Un projet dédié, séparé des autres
+projets Supabase de l'asso.
+
+1. Sur [supabase.com](https://supabase.com), *New project* : nom
+   `senzu-photos`, région `West EU` (Paris ou Francfort, peu importe), et un
+   mot de passe de base de données quelconque — on ne se sert pas de la base,
+   uniquement du stockage de fichiers. Garde-le quand même dans ton
+   gestionnaire de mots de passe.
+2. Une fois le projet créé : *Settings* → *API*. Copie deux valeurs dans le
+   `.env` :
+   - *Project URL* → `SUPABASE_URL`
+   - la clé **service_role** (section "Project API keys", il faut cliquer
+     pour la révéler) → `SUPABASE_SERVICE_KEY`
+
+Attention à bien prendre la clé `service_role` et pas la clé `anon`. Cette
+clé donne tous les droits sur le projet : elle reste dans le `.env`, jamais
+dans git, jamais dans la galerie.
+
+Il n'y a rien d'autre à préparer : le script crée lui-même un bucket public
+`photos-{slug}` par événement.
+
+Sur le plan gratuit, le stockage est limité à 1 Go — ça tient environ un
+événement de 3000 photos en versions réduites. Pour en garder plusieurs en
+ligne, il faudra soit passer au plan Pro (25 $/mois), soit supprimer les
+buckets des anciens événements.
+
+## Traiter un événement
+
+D'abord préparer le dossier de l'événement : copie `events/exemple/` sous un
+nouveau nom (par exemple `events/pauleenne-2026/`), adapte `event.yaml` (slug,
+nom, date, courses, chemin du CSV) et remplace le CSV par le vrai export des
+inscriptions. Puis dépose les photos JPEG dans `input/` et lance :
+
+```bash
+python scripts/process_event.py events/pauleenne-2026/event.yaml
+```
+
+Le script annonce le nombre de photos et le coût Vision estimé, attend ta
+confirmation, puis traite tout : OCR, validation des dossards contre le CSV,
+miniatures et versions web, upload, et enfin l'`index.json` publié dans le
+bucket.
+
+Deux points à connaître :
+
+- Si ça s'interrompt (plantage, Ctrl+C, Codespace qui s'endort), relance
+  exactement la même commande : les photos déjà traitées sont sautées, le
+  travail reprend où il s'était arrêté.
+- Un numéro lu partiellement (dossard plié, à moitié caché) est quand même
+  attribué s'il ne peut correspondre qu'à un seul inscrit, avec une confiance
+  "moyenne". Ces cas seront listés dans la page admin pour vérification.
+
+Pour essayer sans rien envoyer sur Supabase, ou sur un petit échantillon :
+
+```bash
+python scripts/process_event.py events/pauleenne-2026 --sans-upload --limite 20
+```
+
+Autres options : `--dossier` pour lire les photos ailleurs que dans `input/`,
+`--debit` pour ralentir les appels à Vision (5 par seconde par défaut),
+`--workers` pour le nombre de photos traitées en parallèle, `--oui` pour
+passer la confirmation.
+
+## Le watermark
+
+Optionnel. Dépose le logo SENZU au format PNG (fond transparent de
+préférence) dans `assets/watermark.png` : il sera incrusté discrètement en bas
+à droite des versions web (pas des miniatures). Sans ce fichier, le script le
+signale et continue sans watermark. Mieux vaut donc le mettre en place avant
+de traiter un gros événement : l'ajouter après coup oblige à supprimer
+`output/{slug}/` et à relancer le traitement complet, OCR compris.
