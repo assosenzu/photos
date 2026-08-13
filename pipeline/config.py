@@ -73,7 +73,6 @@ def charger_evenement(chemin):
         "couleurs": {
             str(k): str(v).strip() for k, v in couleurs_brut.items() if v
         },
-        "watermark": str(organisateur_brut.get("watermark", "") or "").strip(),
     }
 
     return {

@@ -12,7 +12,7 @@ la bonne section de doc.
 
 - Code, identifiants, messages et documentation en français.
 - Outil "marque blanche" : aucune référence en dur à un organisateur dans le
-  code. Toute l'identité (nom, site, couleurs, watermark) vient du bloc
+  code. Toute l'identité (nom, site, couleurs) vient du bloc
   `organisateur` de l'`event.yaml` et transite par `index.json`.
 - Galerie et page admin : un seul fichier HTML chacun, zéro dépendance,
   zéro build.
@@ -26,7 +26,7 @@ input/*.jpg
    └─ scripts/process_event.py <event.yaml>
         ├─ pipeline/vision_ocr.py     OCR (débit limité, coût affiché avant)
         ├─ pipeline/matching.py       candidats → dossards (haute/moyenne)
-        ├─ pipeline/images.py         miniature 800 q80, web 1600 q85 + watermark
+        ├─ pipeline/images.py         miniature 800 q80, web 1600 q85
         ├─ pipeline/stockage.py       bucket public Supabase photos-{slug}
         └─ pipeline/journal.py        output/{slug}/journal.jsonl (reprise)
              └─ pipeline/index_builder.py → output/{slug}/index.json
@@ -65,9 +65,6 @@ galerie/annoter.html annotation d'une vérité terrain → verite.json
 - **Supabase** : la signature de `storage.create_bucket` varie selon les
   versions du client Python ; `pipeline/stockage.py` a un repli. En cas de
   problème d'upload, c'est le premier endroit à regarder.
-- **Watermark** : appliqué seulement aux versions web au moment du
-  traitement. L'ajouter après coup implique de retraiter (donc re-payer
-  l'OCR) — c'est documenté et assumé.
 - **Vision** : quota par défaut largement suffisant ; le limiteur de débit
   (5 req/s, `--debit`) est un garde-fou. Arrêt automatique si les premières
   photos échouent toutes (mauvaise clé, API désactivée) pour ne pas insister

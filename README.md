@@ -13,11 +13,12 @@ dans `events/` avec sa configuration et sa liste de participants.
 ## Où on en est
 
 Pipeline et galerie sont fonctionnels : OCR, validation par la liste des
-inscrits, récupération des lectures partielles, miniatures, watermark
-(optionnel), upload Supabase, index, galerie de recherche par dossard et page
-admin de validation. L'outil est générique : toute l'identité (nom, site,
-couleurs, logo) se règle dans l'`event.yaml` de chaque organisateur, le code
-ne contient rien de spécifique à SENZU.
+inscrits, récupération des lectures partielles, miniatures, upload Supabase,
+index, galerie de recherche par dossard et page admin de validation. L'outil
+est générique : toute l'identité (nom, site, couleurs) se règle dans
+l'`event.yaml` de chaque organisateur, le code ne contient rien de spécifique
+à SENZU. Le watermark n'est pas géré par l'outil — les photographes
+appliquent le leur directement sur les photos livrées.
 
 ## Contenu du dépôt
 
@@ -35,7 +36,7 @@ scripts/apply_validations.py   applique les décisions du poste de tri
 scripts/evaluer.py         compare la détection à la vérité terrain annotée
 input/                déposer ici les photos à traiter (jamais versionnées)
 secrets/              déposer ici la clé Google Cloud (jamais versionnée)
-assets/               logo pour le watermark (optionnel, voir plus bas)
+assets/               ressources statiques
 output/               fichiers générés : miniatures, index, journal (jamais versionnés)
 .env.example          modèle de configuration, à copier en .env
 requirements.txt      dépendances Python
@@ -304,12 +305,3 @@ python scripts/purger_evenement.py events/mon-evenement/event.yaml
 Le bucket entier est supprimé, après confirmation en tapant le slug. Le cadre
 complet (information des participants, délais, durée de conservation) est
 dans RGPD.md.
-
-## Le watermark
-
-Optionnel. Dépose le logo SENZU au format PNG (fond transparent de
-préférence) dans `assets/watermark.png` : il sera incrusté discrètement en bas
-à droite des versions web (pas des miniatures). Sans ce fichier, le script le
-signale et continue sans watermark. Mieux vaut donc le mettre en place avant
-de traiter un gros événement : l'ajouter après coup oblige à supprimer
-`output/{slug}/` et à relancer le traitement complet, OCR compris.

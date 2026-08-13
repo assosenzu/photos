@@ -7,7 +7,7 @@ il est comme ça et où on pense aller.
 ## Décisions prises
 
 **Marque blanche.** L'outil ne contient aucune référence en dur à SENZU :
-nom, site, couleurs et watermark viennent du bloc `organisateur` de chaque
+nom, site et couleurs viennent du bloc `organisateur` de chaque
 `event.yaml`. Objectif : pouvoir le proposer à n'importe quel club ou
 organisateur, SENZU n'étant qu'un utilisateur (et la vitrine).
 
@@ -97,6 +97,7 @@ avant le premier événement (voir CLAUDE.md, « Tester sans clés »).
 un événement. Passage au plan Pro ou purge des anciens buckets à décider
 quand le deuxième événement arrivera.
 
-**Identité SENZU.** Logo (pour le watermark) et couleurs officielles jamais
-fournis — la démo utilise une palette orange plausible. À récupérer avant la
-première vraie galerie publiée.
+**Identité SENZU.** Couleurs officielles jamais fournies — la démo utilise
+une palette orange plausible. À récupérer avant la première vraie galerie
+publiée. Le watermark n'est pas géré par l'outil : les photographes
+appliquent le leur sur les photos livrées.

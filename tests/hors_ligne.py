@@ -19,7 +19,6 @@ from PIL import Image
 from pipeline.config import charger_evenement
 from pipeline.images import (
     HEIF_DISPONIBLE,
-    charger_watermark,
     generer_versions,
     horodatage_exif,
 )
@@ -75,15 +74,10 @@ def test_images(tmp):
     thumbs, web = tmp / "thumbs", tmp / "web"
     thumbs.mkdir(), web.mkdir()
 
-    logo = Image.new("RGBA", (400, 120), (255, 255, 255, 255))
-    logo.save(tmp / "logo.png")
-    wm = charger_watermark(tmp / "logo.png")
-    check(wm is not None and charger_watermark(tmp / "absent.png") is None, "watermark")
-
-    t, w = generer_versions(src / "a.jpg", thumbs, web, wm)
+    t, w = generer_versions(src / "a.jpg", thumbs, web)
     with Image.open(t) as ti, Image.open(w) as wi:
         check(max(ti.size) == 800 and max(wi.size) == 1600, "tailles miniature/web")
-    t2, w2 = generer_versions(src / "b.png", thumbs, web, None)
+    t2, w2 = generer_versions(src / "b.png", thumbs, web)
     check(t2.name == "b.jpg" and w2.name == "b.jpg", "PNG converti en .jpg")
     with Image.open(w2) as wi2:
         check(wi2.size == (1067, 1600), f"portrait: {wi2.size}")
@@ -96,7 +90,7 @@ def test_images(tmp):
 
     if HEIF_DISPONIBLE:
         Image.new("RGB", (1200, 800), (10, 120, 60)).save(src / "c.heic")
-        t3, _ = generer_versions(src / "c.heic", thumbs, web, None)
+        t3, _ = generer_versions(src / "c.heic", thumbs, web)
         check(t3.name == "c.jpg", "HEIC converti en .jpg")
         contenu = LecteurVision._contenu_image(src / "c.heic")
         check(contenu[:2] == b"\xff\xd8", "HEIC réencodé en JPEG pour Vision")

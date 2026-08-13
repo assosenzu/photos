@@ -25,9 +25,6 @@ participants_csv: events/exemple/participants.csv
 organisateur:
   nom: SENZU Sport Expérience
   site: https://senzu-asso.fr
-  # Logo PNG incrusté en bas à droite des versions web (chemin local).
-  # Laisser vide ou retirer la ligne pour ne pas mettre de watermark.
-  watermark: assets/watermark.png
   # Couleurs de la galerie (codes hexadécimaux). Clés reconnues :
   # accent (boutons), accent_fonce (survol), entete (bandeau du haut),
   # entete_texte, fond. Les clés absentes gardent la valeur par défaut.

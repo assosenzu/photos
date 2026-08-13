@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 
 from pipeline.config import ErreurConfig, charger_evenement
-from pipeline.images import charger_watermark, generer_versions, horodatage_exif
+from pipeline.images import generer_versions, horodatage_exif
 from pipeline.index_builder import construire_index, ecrire_index
 from pipeline.journal import Journal
 from pipeline.matching import associer
@@ -44,7 +44,6 @@ from pipeline.vision_ocr import (
 )
 
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".heif"}
-CHEMIN_WATERMARK = "assets/watermark.png"
 ECHECS_CONSECUTIFS_MAX = 5
 
 
@@ -148,14 +147,6 @@ def main():
                 print("Annulé.")
                 return
 
-    chemin_watermark = evenement["organisateur"]["watermark"] or CHEMIN_WATERMARK
-    watermark = charger_watermark(chemin_watermark)
-    if watermark is None and restantes:
-        print(
-            f"Pas de logo en {chemin_watermark} : les versions web seront "
-            "générées sans watermark."
-        )
-
     stockage = None
     if not args.sans_upload:
         try:
@@ -189,7 +180,7 @@ def main():
         dossards = associer(extraire_nombres(texte), participants)
 
         miniature, web = generer_versions(
-            chemin, dossier_miniatures, dossier_web, watermark
+            chemin, dossier_miniatures, dossier_web
         )
         if stockage is not None:
             url_miniature = stockage.deposer(miniature, f"thumbs/{miniature.name}")
